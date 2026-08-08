@@ -50,7 +50,7 @@ function getSupabase() {
   function playNotificationSound() {
       try {
           const audio = new Audio('./assets/mixkit-software-interface-start-2574.wav');
-          audio.volume = 0.3;
+          audio.volume = 0.6;
           audio.play().catch(() => playFallbackChime());
       } catch (e) {
           playFallbackChime();
