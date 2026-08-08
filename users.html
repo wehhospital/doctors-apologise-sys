@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المستخدمين - الأدمن</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Cairo', sans-serif; }</style>
+</head>
+<body class="bg-gray-100 min-h-screen p-2 md:p-4">
+
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <div class="w-full max-w-[99%] mx-auto space-y-4">
+        
+        <div class="bg-white p-4 md:p-5 rounded-xl shadow-md border-t-4 border-gray-800 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-black text-gray-800">👥 إدارة المستخدمين والصلاحيات</h1>
+                <p class="text-gray-600 text-xs font-bold mt-1">التحكم في حسابات النظام وكلمات المرور</p>
+            </div>
+            <button onclick="logout()" class="bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold px-3 py-1.5 rounded-lg">خروج 🚪</button>
+        </div>
+
+        <div class="flex gap-2 border-b border-gray-300 pb-2">
+            <a href="index.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow">📋 جدول الاعتذارات</a>
+            <a href="users.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-gray-900 text-white shadow">👥 إدارة المستخدمين</a>
+            <a href="logs.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow">📜 سجل العمليات (Logs)</a>
+        </div>
+
+        <!-- استمارة التعديل والإضافة -->
+        <div class="bg-white p-6 rounded-xl shadow-md border-t-4 border-gray-800">
+            <h2 class="text-xl font-black text-gray-800 mb-4 border-b pb-2 flex justify-between">
+                <span>إضافة / تعديل مستخدم</span>
+                <span id="userFormMode" class="text-xs bg-gray-200 text-gray-700 px-2.5 py-1 rounded-full font-bold">إضافة جديد</span>
+            </h2>
+
+            <form id="userManageForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="hidden" id="editUserId">
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">الاسم بالكامل *</label>
+                    <input type="text" id="uName" required placeholder="مثال: د. محمد العلي" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">اسم المستخدم (Username) *</label>
+                    <input type="text" id="uUsername" required placeholder="مثال: m_ali" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">كلمة المرور *</label>
+                    <input type="password" id="uPassword" required placeholder="••••••••" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
+                    <div class="flex items-center gap-1.5 mt-2">
+                        <input type="checkbox" id="showUserPassword" onchange="togglePasswordVisibility()" class="w-4 h-4 accent-gray-800 cursor-pointer">
+                        <label for="showUserPassword" class="text-xs font-bold text-gray-600 cursor-pointer select-none">👁️ إظهار كلمة المرور</label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">الصلاحية *</label>
+                    <select id="uRole" required class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
+                        <option value="admin">🔴 مدير النظام (Admin)</option>
+                        <option value="editor">🔵 مدخل بيانات (Editor)</option>
+                        <option value="callcenter">🟣 كول سينتر (Call Center)</option>
+                        <option value="viewer">🟢 طبيب / عرض فقط (Viewer)</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-4 flex justify-end gap-2">
+                    <button type="button" onclick="resetUserForm()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg text-sm">إلغاء / إعادة ضبط</button>
+                    <button type="submit" class="bg-gray-900 hover:bg-black text-white font-black py-2 px-6 rounded-lg text-sm shadow">حفظ المستخدم</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- جدول المستخدمين -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-300 w-full">
+            <table class="w-full text-center border-collapse">
+                <thead>
+                    <tr class="bg-gray-200 border-b-2 border-gray-400 text-black text-base font-black">
+                        <th class="p-3.5 border-l">#</th>
+                        <th class="p-3.5 border-l">الاسم</th>
+                        <th class="p-3.5 border-l">اسم المستخدم</th>
+                        <th class="p-3.5 border-l">كلمة المرور</th>
+                        <th class="p-3.5 border-l">الصلاحية</th>
+                        <th class="p-3.5">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody" class="divide-y divide-gray-300 text-sm font-bold"></tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        let currentUser = checkAuth('admin'); // حماية الصفحة للأدمن فقط
+        let users = [];
+
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('uPassword');
+            const checkbox = document.getElementById('showUserPassword');
+            if (passInput && checkbox) passInput.type = checkbox.checked ? 'text' : 'password';
+        }
+
+        async function fetchUsers() {
+            const client = getSupabase();
+            if (!client) return;
+            const { data, error } = await client.from('profiles').select('*').order('id', { ascending: true });
+            if (!error && data) { 
+                users = data; 
+                renderUsersTable(); 
+            }
+        }
+
+        // حفظ / تعديل المستخدمين في Supabase
+        document.getElementById('userManageForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editUserId').value;
+            const uName = document.getElementById('uName').value.trim();
+            const uUsername = document.getElementById('uUsername').value.trim();
+            const uPassword = document.getElementById('uPassword').value.trim();
+            const uRole = document.getElementById('uRole').value;
+
+            const client = getSupabase();
+
+            if (editId) {
+                // تعديل مستخدم بـ ID رقمي صحيح
+                if (client) {
+                    const numericId = Number(editId);
+                    const { error } = await client
+                        .from('profiles')
+                        .update({ 
+                            name: uName, 
+                            username: uUsername, 
+                            password: uPassword, 
+                            role: uRole 
+                        })
+                        .eq('id', numericId);
+
+                    if (error) {
+                        console.error("❌ خطأ تعديل المستخدم في Supabase:", error);
+                        alert("⚠️ فشل التعديل في السيرفر: " + error.message);
+                        return;
+                    }
+                }
+
+                // تحديث الجلسة المحلية إذا كان المستخدم يُعدل حسابه الحالي
+                if (currentUser && String(currentUser.id) === String(editId)) {
+                    currentUser.name = uName;
+                    currentUser.username = uUsername;
+                    currentUser.password = uPassword;
+                    currentUser.role = uRole;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                }
+
+                await createLog('تعديل مستخدم', `تم تعديل بيانات المستخدم (${uName} / ${uUsername})`);
+                showToast("✅ تم تعديل بيانات المستخدم بنجاح", "success");
+            } else {
+                // إضافة مستخدم جديد
+                if (client) {
+                    const { error } = await client.from('profiles').insert([{ 
+                        name: uName, 
+                        username: uUsername, 
+                        password: uPassword, 
+                        role: uRole 
+                    }]);
+
+                    if (error) {
+                        console.error("❌ خطأ إضافة المستخدم في Supabase:", error);
+                        alert("⚠️ فشل إضافة المستخدم في السيرفر: " + error.message);
+                        return;
+                    }
+                }
+                await createLog('إضافة مستخدم', `تم إنشاء حساب جديد باسم (${uName} / ${uUsername})`);
+                showToast("✅ تم إضافة المستخدم بنجاح", "success");
+            }
+
+            await fetchUsers();
+            resetUserForm();
+        });
+
+        function renderUsersTable() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            users.forEach((u, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="p-3 border-l font-black">${index + 1}</td>
+                    <td class="p-3 border-l text-black font-extrabold">${u.name}</td>
+                    <td class="p-3 border-l text-gray-700">${u.username}</td>
+                    <td class="p-3 border-l font-mono text-gray-800">${u.password || '••••••••'}</td>
+                    <td class="p-3 border-l">${rolesBadges[u.role] || u.role}</td>
+                    <td class="p-3 font-bold space-x-2 space-x-reverse">
+                        <button onclick="editUser('${u.id}')" class="text-blue-600 hover:text-blue-800">✏️ تعديل</button>
+                        <button onclick="deleteUser('${u.id}')" class="text-red-600 hover:text-red-800">❌ حذف</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function resetUserForm() {
+            document.getElementById('userManageForm').reset();
+            document.getElementById('editUserId').value = '';
+            document.getElementById('uPassword').type = 'password';
+            document.getElementById('showUserPassword').checked = false;
+            document.getElementById('userFormMode').innerText = 'إضافة جديد';
+            document.getElementById('userFormMode').className = 'text-xs bg-gray-200 text-gray-700 px-2.5 py-1 rounded-full font-bold';
+        }
+
+        function editUser(id) {
+            const u = users.find(user => String(user.id) === String(id));
+            if (u) {
+                document.getElementById('editUserId').value = u.id;
+                document.getElementById('uName').value = u.name;
+                document.getElementById('uUsername').value = u.username;
+                document.getElementById('uPassword').value = u.password || '';
+                document.getElementById('uRole').value = u.role;
+
+                document.getElementById('uPassword').type = 'password';
+                document.getElementById('showUserPassword').checked = false;
+
+                document.getElementById('userFormMode').innerText = 'تعديل مستخدم';
+                document.getElementById('userFormMode').className = 'text-xs bg-yellow-200 text-yellow-800 px-2.5 py-1 rounded-full font-bold';
+            }
+        }
+
+        async function deleteUser(id) {
+            if (String(id) === String(currentUser.id)) { alert('لا يمكنك حذف حسابك الحالي!'); return; }
+            if (confirm('هل أنت متأكد من حذف الحساب؟')) {
+                const client = getSupabase();
+                if (client) {
+                    const numericId = Number(id);
+                    const { error } = await client.from('profiles').delete().eq('id', numericId);
+                    if (error) {
+                        alert("⚠️ فشل حذف المستخدم من السيرفر: " + error.message);
+                        return;
+                    }
+                }
+                await createLog('حذف مستخدم', 'تم حذف حساب مستخدم');
+                fetchUsers();
+            }
+        }
+
+        fetchUsers();
+    </script>
+</body>
+</html>

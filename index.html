@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول اعتذارات الأطباء</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        th, td { white-space: nowrap !important; padding: 10px 8px !important; }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-2 md:p-4">
+
+    <!-- حاوية الإشعارات المنبثقة الفورية -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 no-print"></div>
+
+    <div class="w-full max-w-[99%] mx-auto space-y-4">
+        
+        <!-- الشريط العلوي -->
+        <div class="bg-white p-4 md:p-5 rounded-xl shadow-md border-t-4 border-red-600 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-black text-red-600">جدول اعتذارات الأطباء</h1>
+                <p class="text-gray-600 text-xs font-bold mt-1">نظام الإدارة اللحظي وتوثيق الاعتذارات</p>
+            </div>
+
+            <div class="flex items-center gap-3 no-print">
+                <!-- جرس الإشعارات -->
+                <div id="notifContainer" class="relative">
+                    <button onclick="toggleNotificationsMenu(event)" class="relative bg-gray-100 hover:bg-gray-200 p-2.5 rounded-xl border border-gray-300 transition text-xl flex items-center justify-center">
+                        🔔
+                        <span id="notifBadge" class="hidden absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow">0</span>
+                    </button>
+                    <div id="notifMenu" class="hidden absolute left-0 mt-2 w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 p-4 space-y-3">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="font-black text-gray-800 text-sm">🔔 الإشعارات والتنبيهات</h3>
+                            <button onclick="markAllNotificationsRead()" class="text-xs text-blue-600 font-bold hover:underline">تحديد الكل كمقروء</button>
+                        </div>
+                        <div id="notifList" class="max-h-64 overflow-y-auto divide-y divide-gray-100 text-xs font-semibold space-y-2"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 bg-gray-50 p-2.5 px-4 rounded-xl border border-gray-200">
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500 font-bold">مرحباً بك،</p>
+                        <p id="currentUserDisplay" class="text-sm font-black text-gray-900"></p>
+                    </div>
+                    <span id="roleBadge" class="text-xs px-2.5 py-1 rounded-full font-bold"></span>
+                    <button onclick="logout()" class="bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold px-3 py-1.5 rounded-lg transition mr-2">خروج 🚪</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- أزرار التنقل بين الصفحات -->
+        <div class="flex gap-2 border-b border-gray-300 pb-2 no-print overflow-x-auto">
+            <a href="index.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-red-600 text-white shadow">📋 جدول الاعتذارات</a>
+            <a id="navUsersBtn" href="users.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">👥 إدارة المستخدمين</a>
+            <a id="navLogsBtn" href="logs.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">📜 سجل العمليات (Logs)</a>
+        </div>
+
+        <!-- استمارة إضافة / تعديل اعتذار -->
+        <div id="addFormSection" class="bg-white p-5 rounded-xl shadow-md no-print">
+            <h2 id="absenceFormTitle" class="text-xl font-black text-gray-800 mb-4 border-b pb-2">➕ إضافة اعتذار جديد</h2>
+            <form id="absenceForm" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <input type="hidden" id="editingAbsenceId">
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">اسم الطبيب *</label>
+                    <input type="text" id="doctorName" required placeholder="د. اسم الطبيب" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-red-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">عياده - فحص - عمليات *</label>
+                    <select id="clinic" required class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
+                        <option value="" disabled selected>اختر النوع</option>
+                        <option value="عياده" style="background-color: #e0f2fe; color: #0369a1;">🟦 عياده</option>
+                        <option value="فحص" style="background-color: #fef3c7; color: #b45309;">🟨 فحص</option>
+                        <option value="عمليات" style="background-color: #f3e8ff; color: #6b21a8;">🟪 عمليات</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">الفرع *</label>
+                    <select id="branch" required class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
+                        <option value="" disabled selected>اختر الفرع</option>
+                        <option value="فرع الثورة" style="background-color: #d1fae5; color: #047857;">🟩 فرع الثورة</option>
+                        <option value="فرع الحجاز" style="background-color: #e0e7ff; color: #4338ca;">🟦 فرع الحجاز</option>
+                        <option value="فرع الغردقه" style="background-color: #ffe4e6; color: #be123c;">🟥 فرع الغردقه</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">التاريخ *</label>
+                    <input type="date" id="date" required onchange="updateDay()" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">اليوم</label>
+                    <input type="text" id="day" readonly class="w-full bg-gray-100 border border-gray-400 rounded-lg p-2.5 text-sm font-bold cursor-not-allowed">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">من (الساعة) *</label>
+                    <select id="timeFrom" required class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
+                        <option value="" disabled selected>اختر الساعة</option>
+                        <option value="08:00 صباحاً">☀️ 08:00 صباحاً</option>
+                        <option value="09:00 صباحاً">☀️ 09:00 صباحاً</option>
+                        <option value="10:00 صباحاً">☀️ 10:00 صباحاً</option>
+                        <option value="11:00 صباحاً">☀️ 11:00 صباحاً</option>
+                        <option value="12:00 ظهراً">🌤️ 12:00 ظهراً</option>
+                        <option value="01:00 مساءً">🌙 01:00 مساءً</option>
+                        <option value="02:00 مساءً">🌙 02:00 مساءً</option>
+                        <option value="03:00 مساءً">🌙 03:00 مساءً</option>
+                        <option value="04:00 مساءً">🌙 04:00 مساءً</option>
+                        <option value="05:00 مساءً">🌙 05:00 مساءً</option>
+                        <option value="06:00 مساءً">🌙 06:00 مساءً</option>
+                        <option value="07:00 مساءً">🌙 07:00 مساءً</option>
+                        <option value="08:00 مساءً">🌙 08:00 مساءً</option>
+                        <option value="09:00 مساءً">🌙 09:00 مساءً</option>
+                        <option value="10:00 مساءً">🌙 10:00 مساءً</option>
+                        <option value="11:00 مساءً">🌙 11:00 مساءً</option>
+                        <option value="12:00 منتصف الليل">🌌 12:00 منتصف الليل</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">إلى (الساعة) *</label>
+                    <select id="timeTo" required class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
+                        <option value="" disabled selected>اختر الساعة</option>
+                        <option value="08:00 صباحاً">☀️ 08:00 صباحاً</option>
+                        <option value="09:00 صباحاً">☀️ 09:00 صباحاً</option>
+                        <option value="10:00 صباحاً">☀️ 10:00 صباحاً</option>
+                        <option value="11:00 صباحاً">☀️ 11:00 صباحاً</option>
+                        <option value="12:00 ظهراً">🌤️ 12:00 ظهراً</option>
+                        <option value="01:00 مساءً">🌙 01:00 مساءً</option>
+                        <option value="02:00 مساءً">🌙 02:00 مساءً</option>
+                        <option value="03:00 مساءً">🌙 03:00 مساءً</option>
+                        <option value="04:00 مساءً">🌙 04:00 مساءً</option>
+                        <option value="05:00 مساءً">🌙 05:00 مساءً</option>
+                        <option value="06:00 مساءً">🌙 06:00 مساءً</option>
+                        <option value="07:00 مساءً">🌙 07:00 مساءً</option>
+                        <option value="08:00 مساءً">🌙 08:00 مساءً</option>
+                        <option value="09:00 مساءً">🌙 09:00 مساءً</option>
+                        <option value="10:00 مساءً">🌙 10:00 مساءً</option>
+                        <option value="11:00 مساءً">🌙 11:00 مساءً</option>
+                        <option value="12:00 منتصف الليل">🌌 12:00 منتصف الليل</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">اسم الطبيب البديل</label>
+                    <input type="text" id="substituteDoctor" placeholder="اختياري" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
+                </div>
+
+                <div class="md:col-span-2 lg:col-span-2">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">ملاحظات</label>
+                    <input type="text" id="notes" placeholder="أي تفاصيل أخرى..." class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
+                </div>
+
+                <div class="md:col-span-2 lg:col-span-2 flex items-end gap-2">
+                    <button type="submit" id="absenceSubmitBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-black py-2.5 px-4 rounded-lg shadow text-base">حفظ البيانات</button>
+                    <button type="button" id="absenceCancelBtn" onclick="resetAbsenceForm()" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2.5 px-4 rounded-lg text-base">إلغاء</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- أدوات البحث والطباعة -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 no-print bg-white p-4 rounded-xl shadow-md">
+            <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="🔍 بحث باسم الطبيب، الفرع، أو النوع..." class="w-full sm:w-80 border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
+            <div class="flex gap-2">
+                <button onclick="window.print()" class="bg-gray-800 hover:bg-black text-white px-5 py-2.5 rounded-lg text-sm font-bold">🖨️ طباعة الجدول</button>
+                <button id="clearAllBtn" onclick="clearAllData()" class="bg-red-100 hover:bg-red-200 text-red-700 px-5 py-2.5 rounded-lg text-sm font-bold">🗑️ مسح الكل</button>
+            </div>
+        </div>
+
+        <!-- الجدول الرئيسي -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden print-table border border-gray-300 w-full">
+            <table class="w-full text-center border-collapse">
+                <thead>
+                    <tr class="bg-gray-200 border-b-2 border-gray-400 text-black text-base font-black">
+                        <th class="p-3 border-l border-gray-300">م</th>
+                        <th class="p-3 border-l border-gray-300 text-red-600">اسم الطبيب</th>
+                        <th class="p-3 border-l border-gray-300">عياده - فحص - عمليات</th>
+                        <th class="p-3 border-l border-gray-300">الفرع</th>
+                        <th class="p-3 border-l border-gray-300">التاريخ</th>
+                        <th class="p-3 border-l border-gray-300">اليوم</th>
+                        <th class="p-3 border-l border-gray-300">من</th>
+                        <th class="p-3 border-l border-gray-300">إلى</th>
+                        <th class="p-3 border-l border-gray-300 text-red-600">اسم الطبيب البديل</th>
+                        <th class="p-3 border-l border-gray-300">ملاحظات والتأكيد</th>
+                        <th id="actionHeader" class="p-3 no-print">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y divide-gray-300"></tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        let currentUser = checkAuth();
+        let absences = [];
+        let notifications = [];
+        const daysArabic = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+        async function initPage() {
+            const client = getSupabase();
+            if (client && currentUser.username) {
+                const { data } = await client.from('profiles').select('*').ilike('username', currentUser.username).maybeSingle();
+                if (data) {
+                    currentUser.name = data.name; currentUser.role = data.role; currentUser.password = data.password;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                }
+            }
+
+            document.getElementById('currentUserDisplay').innerText = currentUser.name;
+            const badge = document.getElementById('roleBadge');
+            
+            if (currentUser.role === 'admin') {
+                badge.innerText = "مدير النظام"; badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-red-100 text-red-800";
+                document.getElementById('navUsersBtn').classList.remove('hidden');
+                document.getElementById('navLogsBtn').classList.remove('hidden');
+            } else if (currentUser.role === 'editor') {
+                badge.innerText = "مدخل بيانات"; badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-blue-100 text-blue-800";
+                document.getElementById('clearAllBtn').classList.add('hidden');
+            } else if (currentUser.role === 'callcenter') {
+                badge.innerText = "كول سينتر"; badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-purple-100 text-purple-800";
+                document.getElementById('addFormSection').classList.add('hidden');
+                document.getElementById('clearAllBtn').classList.add('hidden');
+                document.getElementById('actionHeader').classList.add('hidden');
+            } else {
+                badge.innerText = "عرض فقط"; badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-green-100 text-green-800";
+                document.getElementById('addFormSection').classList.add('hidden');
+                document.getElementById('clearAllBtn').classList.add('hidden');
+                document.getElementById('actionHeader').classList.add('hidden');
+            }
+
+            fetchAbsences();
+            fetchNotifications();
+            setupRealtime();
+        }
+
+        async function fetchAbsences() {
+            const client = getSupabase();
+            if (!client) return;
+
+            const { data, error } = await client.from('doctor_absences').select('*').order('id', { ascending: false });
+            if (!error && data) {
+                absences = data.map(item => ({
+                    id: item.id, doctorName: item.doctor_name, clinic: item.clinic, branch: item.branch,
+                    date: item.date, day: item.day, timeFrom: item.time_from, timeTo: item.time_to,
+                    substituteDoctor: item.substitute_doctor, notes: item.notes, ccChecked: Boolean(item.cc_checked),
+                    ccCheckedBy: item.cc_checked_by || '', ccCheckedTimestamp: item.cc_checked_timestamp ? new Date(item.cc_checked_timestamp).getTime() : null
+                }));
+                renderTable();
+            }
+        }
+
+        document.getElementById('absenceForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (currentUser.role === 'viewer' || currentUser.role === 'callcenter') return;
+
+            const editId = document.getElementById('editingAbsenceId').value;
+            const client = getSupabase();
+
+            const absencePayload = {
+                doctor_name: document.getElementById('doctorName').value,
+                clinic: document.getElementById('clinic').value,
+                branch: document.getElementById('branch').value,
+                date: document.getElementById('date').value,
+                day: document.getElementById('day').value,
+                time_from: document.getElementById('timeFrom').value,
+                time_to: document.getElementById('timeTo').value,
+                substitute_doctor: document.getElementById('substituteDoctor').value || '-',
+                notes: document.getElementById('notes').value || '-'
+            };
+
+            if (client) {
+                if (editId) {
+                    await client.from('doctor_absences').update(absencePayload).eq('id', editId);
+                    await createLog('تعديل اعتذار', `تم تعديل بيانات اعتذار الطبيب (${absencePayload.doctor_name}) بواسطة (${currentUser.name})`);
+                } else {
+                    const { error } = await client.from('doctor_absences').insert([absencePayload]);
+                    if (error) {
+                        alert("⚠️ فشل الحفظ أونلاين: " + error.message);
+                        return;
+                    }
+                    await createLog('إضافة اعتذار', `تم حجز/إضافة اعتذار جديد للطبيب (${absencePayload.doctor_name}) - ${absencePayload.branch} بواسطة (${currentUser.name})`);
+                    
+                    const notifText = `📢 تم إضافة اعتذار جديد للطبيب (${absencePayload.doctor_name}) - ${absencePayload.branch} بواسطة (${currentUser.name})`;
+                    await addNotification(notifText);
+                }
+            }
+            fetchAbsences();
+            resetAbsenceForm();
+        });
+
+        // تأكيد الملاحظة وتسجيل اسم اليوزر الفعلي الإجرائي
+        async function toggleCallCenterCheck(id) {
+            if (currentUser.role !== 'callcenter' && currentUser.role !== 'admin') return;
+            const item = absences.find(a => a.id === id);
+            if (!item || item.ccChecked) return;
+
+            const client = getSupabase();
+            const nowIso = new Date().toISOString();
+
+            if (client) {
+                await client.from('doctor_absences').update({
+                    cc_checked: true, cc_checked_by: currentUser.name, cc_checked_timestamp: nowIso
+                }).eq('id', id);
+            }
+
+            const notifMsg = `✅ قام (${currentUser.name}) بتأكيد ملاحظة اعتذار د. (${item.doctorName}) - ${item.branch}`;
+            await addNotification(notifMsg);
+            await createLog('تأكيد ملاحظة', `قام (${currentUser.name}) بتأكيد ملاحظة الطبيب (${item.doctorName}) - ${item.branch}`);
+            fetchAbsences();
+        }
+
+        function renderTable(dataToRender = absences) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            const now = Date.now();
+
+            const currentData = dataToRender.filter(item => {
+                if (item.ccChecked && item.ccCheckedTimestamp) {
+                    return ((now - item.ccCheckedTimestamp) / 1000) < 60;
+                }
+                return true;
+            });
+
+            if (currentData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" class="p-8 text-gray-500 font-bold text-lg">لا توجد اعتذارات مسجلة حتى الآن</td></tr>`;
+                return;
+            }
+
+            currentData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? 'bg-white hover:bg-gray-100' : 'bg-gray-50 hover:bg-gray-100';
+
+                let actionButtons = '';
+                if (currentUser.role === 'admin' || currentUser.role === 'editor') {
+                    actionButtons = `
+                        <td class="p-3 no-print flex justify-center gap-2">
+                            <button onclick="editAbsence(${item.id})" class="text-blue-600 hover:text-blue-800 font-black text-lg p-1">✏️</button>
+                            <button onclick="deleteItem(${item.id})" class="text-red-600 hover:text-red-800 font-black text-lg p-1">❌</button>
+                        </td>
+                    `;
+                }
+
+                const isCC = currentUser.role === 'callcenter' || currentUser.role === 'admin';
+                const timerBadge = (item.ccChecked && item.ccCheckedTimestamp) ? 
+                    `<div class="text-[11px] text-emerald-700 font-bold">✔️ تأكيد: ${item.ccCheckedBy}</div>
+                     <div class="text-[11px] text-red-600 font-extrabold animate-pulse">⏱️ يختفي خلال ${Math.max(0, Math.ceil(60 - ((now - item.ccCheckedTimestamp) / 1000)))} ثانية</div>` : '';
+
+                tr.innerHTML = `
+                    <td class="p-3 border-l font-black">${index + 1}</td>
+                    <td class="p-3 border-l font-black text-red-600">${item.doctorName}</td>
+                    <td class="p-3 border-l font-bold">${clinicBadges[item.clinic] || item.clinic}</td>
+                    <td class="p-3 border-l font-bold">${branchBadges[item.branch] || item.branch}</td>
+                    <td class="p-3 border-l font-bold">${item.date}</td>
+                    <td class="p-3 border-l font-bold">${item.day}</td>
+                    <td class="p-3 border-l font-bold">${item.timeFrom}</td>
+                    <td class="p-3 border-l font-bold">${item.timeTo}</td>
+                    <td class="p-3 border-l font-black text-red-600">${item.substituteDoctor}</td>
+                    <td class="p-3 border-l font-semibold text-sm">
+                        <div class="flex items-center justify-center gap-2">
+                            <input type="checkbox" onchange="toggleCallCenterCheck(${item.id})" ${item.ccChecked ? 'checked disabled' : (!isCC ? 'disabled' : '')} class="w-5 h-5 accent-emerald-600">
+                            <span>${item.notes}</span>
+                        </div>
+                        ${timerBadge}
+                    </td>
+                    ${actionButtons}
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function editAbsence(id) {
+            const item = absences.find(a => a.id === id);
+            if (!item) return;
+
+            document.getElementById('editingAbsenceId').value = item.id;
+            document.getElementById('doctorName').value = item.doctorName;
+            document.getElementById('clinic').value = item.clinic;
+            document.getElementById('branch').value = item.branch;
+            document.getElementById('date').value = item.date;
+            document.getElementById('day').value = item.day;
+            document.getElementById('timeFrom').value = item.timeFrom;
+            document.getElementById('timeTo').value = item.timeTo;
+            document.getElementById('substituteDoctor').value = item.substituteDoctor === '-' ? '' : item.substituteDoctor;
+            document.getElementById('notes').value = item.notes === '-' ? '' : item.notes;
+
+            document.getElementById('absenceFormTitle').innerHTML = '✏️ تعديل بيانات الاعتذار';
+            document.getElementById('absenceSubmitBtn').innerText = 'تحديث التعديلات';
+            document.getElementById('absenceCancelBtn').classList.remove('hidden');
+            document.getElementById('addFormSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function resetAbsenceForm() {
+            document.getElementById('absenceForm').reset();
+            document.getElementById('editingAbsenceId').value = '';
+            document.getElementById('absenceFormTitle').innerHTML = '➕ إضافة اعتذار جديد';
+            document.getElementById('absenceSubmitBtn').innerText = 'حفظ البيانات';
+            document.getElementById('absenceCancelBtn').classList.add('hidden');
+        }
+
+        async function deleteItem(id) {
+            if (confirm('هل أنت تأكد من حذف هذا السجل؟')) {
+                const target = absences.find(a => a.id === id);
+                const client = getSupabase();
+                if (client) await client.from('doctor_absences').delete().eq('id', id);
+                await createLog('حذف اعتذار', `تم حذف الاعتذار للطبيب (${target ? target.doctorName : ''}) بواسطة (${currentUser.name})`);
+                fetchAbsences();
+            }
+        }
+
+        async function clearAllData() {
+            if (confirm('تنبيه للمدير: هل تريد مسح جميع البيانات؟')) {
+                const client = getSupabase();
+                if (client) await client.from('doctor_absences').delete().neq('id', 0);
+                await createLog('مسح الكل', `قام المدير (${currentUser.name}) بمسح الجداول بالكامل`);
+                fetchAbsences();
+            }
+        }
+
+        function updateDay() {
+            const d = document.getElementById('date').value;
+            if (d) document.getElementById('day').value = daysArabic[new Date(d).getDay()];
+        }
+
+        function filterTable() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            renderTable(absences.filter(i => i.doctorName.toLowerCase().includes(query) || i.branch.toLowerCase().includes(query)));
+        }
+
+        async function fetchNotifications() {
+            const client = getSupabase();
+            if (!client) return;
+            const { data } = await client.from('notifications').select('*').order('created_at', { ascending: false });
+            if (data) { notifications = data; renderNotifications(); }
+        }
+
+        function renderNotifications() {
+            const list = document.getElementById('notifList');
+            const badge = document.getElementById('notifBadge');
+            if (!list) return;
+
+            const unread = notifications.filter(n => !n.is_read).length;
+            if (unread > 0) { badge.innerText = unread; badge.classList.remove('hidden'); }
+            else badge.classList.add('hidden');
+
+            list.innerHTML = notifications.length === 0 ? '<div class="p-3 text-center text-gray-400 font-bold">لا توجد إشعارات حالياً</div>' : '';
+            notifications.forEach(n => {
+                const item = document.createElement('div');
+                item.className = `p-2.5 rounded-lg border-b ${n.is_read ? 'bg-white text-gray-600' : 'bg-red-50 text-gray-900 font-bold'}`;
+                item.innerHTML = `<div class="flex justify-between"><span>${n.text}</span><span class="text-[10px] text-gray-400">${new Date(n.created_at).toLocaleTimeString('ar-EG')}</span></div>`;
+                list.appendChild(item);
+            });
+        }
+
+        function setupRealtime() {
+            const client = getSupabase();
+            if (!client) return;
+            client.channel('public:db_changes')
+              .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doctor_absences' }, (payload) => {
+                  fetchAbsences();
+                  playNotificationSound();
+                  showToast(`📢 تم إضافة اعتذار جديد للطبيب (${payload.new.doctor_name}) - ${payload.new.branch}`, 'success');
+              })
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'doctor_absences' }, () => fetchAbsences())
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+                  fetchNotifications();
+                  playNotificationSound();
+              })
+              .subscribe();
+        }
+
+        setInterval(() => renderTable(), 1000);
+        initPage();
+    </script>
+</body>
+</html>
