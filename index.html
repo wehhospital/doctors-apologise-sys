@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جدول اعتذارات الأطباء</title>
+    <title>جدول اعتذارات وإجراءات الأطباء</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Cairo', sans-serif; }
-        th, td { white-space: nowrap !important; padding: 10px 8px !important; }
+        th, td { white-space: nowrap !important; }
         @media print { .no-print { display: none !important; } }
     </style>
 </head>
@@ -24,8 +24,8 @@
         <!-- الشريط العلوي -->
         <div class="bg-white p-4 md:p-5 rounded-xl shadow-md border-t-4 border-red-600 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl md:text-3xl font-black text-red-600">جدول اعتذارات الأطباء</h1>
-                <p class="text-gray-600 text-xs font-bold mt-1">نظام الإدارة اللحظي وتوثيق الاعتذارات</p>
+                <h1 class="text-2xl md:text-3xl font-black text-red-600">جدول إجراءات واعتذارات الأطباء</h1>
+                <p class="text-gray-600 text-xs font-bold mt-1">نظام الإدارة اللحظي وتوثيق الطلبات (Realtime Supabase)</p>
             </div>
 
             <div class="flex items-center gap-3 no-print">
@@ -57,30 +57,63 @@
 
         <!-- أزرار التنقل بين الصفحات -->
         <div class="flex gap-2 border-b border-gray-300 pb-2 no-print overflow-x-auto">
-            <a href="index.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-red-600 text-white shadow">📋 جدول الاعتذارات</a>
+            <a href="index.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-red-600 text-white shadow">📋 جدول الاعتذارات والطلبات</a>
             <a id="navUsersBtn" href="users.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">👥 إدارة المستخدمين</a>
             <a id="navLogsBtn" href="logs.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">📜 سجل العمليات (Logs)</a>
         </div>
 
-        <!-- استمارة إضافة / تعديل اعتذار -->
+        <!-- استمارة إضافة / تعديل إجراء أو اعتذار -->
         <div id="addFormSection" class="bg-white p-5 rounded-xl shadow-md no-print">
-            <h2 id="absenceFormTitle" class="text-xl font-black text-gray-800 mb-4 border-b pb-2">➕ إضافة اعتذار جديد</h2>
+            <h2 id="absenceFormTitle" class="text-xl font-black text-gray-800 mb-4 border-b pb-2">➕ إضافة طلب / إجراء جديد</h2>
             <form id="absenceForm" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 <input type="hidden" id="editingAbsenceId">
 
+                <!-- نوع الإجراء / الطلب -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">اسم الطبيب *</label>
-                    <input type="text" id="doctorName" required placeholder="د. اسم الطبيب" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-red-500">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">نوع الإجراء / الطلب *</label>
+                    <select id="entryType" required onchange="handleEntryTypeChange()" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold outline-none bg-white">
+                        <option value="اعتذار" selected style="background-color: #fee2e2; color: #b91c1c; font-weight: bold;">🔴 اعتذار يومي</option>
+                        <option value="اعتذار فترة" style="background-color: #f3e8ff; color: #6b21a8; font-weight: bold;">🟣 اعتذار فترة (من يوم ليوم/شهر)</option>
+                        <option value="إضافة عيادة" style="background-color: #dcfce7; color: #15803d; font-weight: bold;">🟢 إضافة عيادة</option>
+                        <option value="تعديل" style="background-color: #fef3c7; color: #b45309; font-weight: bold;">🟠 تعديل</option>
+                    </select>
                 </div>
 
                 <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">اسم الطبيب *</label>
+                    <input type="text" id="doctorName" required placeholder="د. اسم الطبيب" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+
+                <!-- عياده - فحص - عمليات -->
+                <div>
                     <label class="block text-xs font-bold text-gray-700 mb-1">عياده - فحص - عمليات *</label>
-                    <select id="clinic" required class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
+                    <select id="clinic" required onchange="handleClinicChange()" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
                         <option value="" disabled selected>اختر النوع</option>
                         <option value="عياده" style="background-color: #e0f2fe; color: #0369a1;">🟦 عياده</option>
                         <option value="فحص" style="background-color: #fef3c7; color: #b45309;">🟨 فحص</option>
                         <option value="عمليات" style="background-color: #f3e8ff; color: #6b21a8;">🟪 عمليات</option>
                     </select>
+                </div>
+
+                <!-- 🔬 خانة "نوع الفحص" -->
+                <div id="examTypeContainer" class="md:col-span-1">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">نوع الفحص</label>
+                    <select id="examTypeSelect" disabled onchange="handleExamTypeSelect(this)" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm font-bold bg-gray-100 text-gray-400 cursor-not-allowed outline-none transition">
+                        <option value="" disabled selected>-- اختر الفحص لإضافته --</option>
+                        <option value="OCT 1">OCT 1</option>
+                        <option value="OCT 2">OCT 2</option>
+                        <option value="Optos">Optos</option>
+                        <option value="Ultrasound">Ultrasound</option>
+                        <option value="BIO">BIO</option>
+                        <option value="PentaCam">PentaCam</option>
+                        <option value="Specular">Specular</option>
+                        <option value="VEP/ERG">VEP/ERG</option>
+                        <option value="Hess Screen Test">Hess Screen Test</option>
+                        <option value="All">All (الكل)</option>
+                    </select>
+                    <p id="examTypeHint" class="text-[10px] text-gray-400 font-bold mt-1">يتطلب اختيار 'فحص' لتفعيل القائمة</p>
+                    
+                    <div id="selectedExamsTags" class="flex flex-wrap gap-1.5 mt-2 min-h-[26px]"></div>
                 </div>
 
                 <div>
@@ -93,9 +126,16 @@
                     </select>
                 </div>
 
+                <!-- من تاريخ -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">التاريخ *</label>
+                    <label id="dateLabel" class="block text-xs font-bold text-gray-700 mb-1">التاريخ *</label>
                     <input type="date" id="date" required onchange="updateDay()" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
+                </div>
+
+                <!-- إلى تاريخ (خاص باعتذار فترة فقط) -->
+                <div id="endDateContainer" class="hidden">
+                    <label class="block text-xs font-bold text-purple-800 mb-1">إلى تاريخ (انتهاء الفترة) *</label>
+                    <input type="date" id="endDate" class="w-full border-2 border-purple-400 rounded-lg p-2.5 text-sm font-bold outline-none bg-purple-50">
                 </div>
 
                 <div>
@@ -103,7 +143,8 @@
                     <input type="text" id="day" readonly class="w-full bg-gray-100 border border-gray-400 rounded-lg p-2.5 text-sm font-bold cursor-not-allowed">
                 </div>
 
-                <div>
+                <!-- وقت البدء -->
+                <div id="timeFromContainer">
                     <label class="block text-xs font-bold text-gray-700 mb-1">من (الساعة) *</label>
                     <select id="timeFrom" required class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
                         <option value="" disabled selected>اختر الساعة</option>
@@ -127,7 +168,8 @@
                     </select>
                 </div>
 
-                <div>
+                <!-- وقت الانتهاء -->
+                <div id="timeToContainer">
                     <label class="block text-xs font-bold text-gray-700 mb-1">إلى (الساعة) *</label>
                     <select id="timeTo" required class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
                         <option value="" disabled selected>اختر الساعة</option>
@@ -156,46 +198,46 @@
                     <input type="text" id="substituteDoctor" placeholder="اختياري" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
                 </div>
 
-                <div class="md:col-span-2 lg:col-span-2">
+                <div class="md:col-span-3 lg:col-span-3">
                     <label class="block text-xs font-bold text-gray-700 mb-1">ملاحظات</label>
                     <input type="text" id="notes" placeholder="أي تفاصيل أخرى..." class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
                 </div>
 
-                <div class="md:col-span-2 lg:col-span-2 flex items-end gap-2">
+                <div class="md:col-span-4 flex items-end gap-2">
                     <button type="submit" id="absenceSubmitBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-black py-2.5 px-4 rounded-lg shadow text-base">حفظ البيانات</button>
                     <button type="button" id="absenceCancelBtn" onclick="resetAbsenceForm()" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2.5 px-4 rounded-lg text-base">إلغاء</button>
                 </div>
             </form>
         </div>
 
-        <!-- أدوات البحث والطباعة -->
+        <!-- أدوات البحث والمسح -->
         <div class="flex flex-col sm:flex-row justify-between items-center gap-4 no-print bg-white p-4 rounded-xl shadow-md">
-            <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="🔍 بحث باسم الطبيب، الفرع، أو النوع..." class="w-full sm:w-80 border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
+            <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="🔍 بحث باسم الطبيب، الفرع، أو نوع الإجراء..." class="w-full sm:w-80 border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
             <div class="flex gap-2">
-                <button onclick="window.print()" class="bg-gray-800 hover:bg-black text-white px-5 py-2.5 rounded-lg text-sm font-bold">🖨️ طباعة الجدول</button>
                 <button id="clearAllBtn" onclick="clearAllData()" class="bg-red-100 hover:bg-red-200 text-red-700 px-5 py-2.5 rounded-lg text-sm font-bold">🗑️ مسح الكل</button>
             </div>
         </div>
 
-        <!-- الجدول الرئيسي -->
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden print-table border border-gray-300 w-full">
+        <!-- الجدول الرئيسي المصمم بأنقة وحرفية عالية -->
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden print-table border border-gray-300 w-full">
             <table class="w-full text-center border-collapse">
                 <thead>
-                    <tr class="bg-gray-200 border-b-2 border-gray-400 text-black text-base font-black">
-                        <th class="p-3 border-l border-gray-300">م</th>
-                        <th class="p-3 border-l border-gray-300 text-red-600">اسم الطبيب</th>
-                        <th class="p-3 border-l border-gray-300">عياده - فحص - عمليات</th>
-                        <th class="p-3 border-l border-gray-300">الفرع</th>
-                        <th class="p-3 border-l border-gray-300">التاريخ</th>
-                        <th class="p-3 border-l border-gray-300">اليوم</th>
-                        <th class="p-3 border-l border-gray-300">من</th>
-                        <th class="p-3 border-l border-gray-300">إلى</th>
-                        <th class="p-3 border-l border-gray-300 text-red-600">اسم الطبيب البديل</th>
-                        <th class="p-3 border-l border-gray-300">ملاحظات والتأكيد</th>
-                        <th id="actionHeader" class="p-3 no-print">إجراءات</th>
+                    <tr class="bg-slate-800 text-white text-sm font-black tracking-wide border-b-2 border-slate-900">
+                        <th class="py-3.5 px-3 border-l border-slate-700">م</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700">نوع الإجراء</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700 text-red-300">اسم الطبيب</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700">عياده - فحص - عمليات</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700">الفرع</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700">التاريخ / الفترة</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700">اليوم</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700">من</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700">إلى</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700 text-red-300">اسم الطبيب البديل</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700">ملاحظات وإجراءات الكول سينتر</th>
+                        <th id="actionHeader" class="py-3.5 px-3 no-print">إجراءات</th>
                     </tr>
                 </thead>
-                <tbody id="tableBody" class="divide-y divide-gray-300"></tbody>
+                <tbody id="tableBody" class="divide-y divide-gray-200 text-sm font-bold"></tbody>
             </table>
         </div>
 
@@ -205,7 +247,108 @@
         let currentUser = checkAuth();
         let absences = [];
         let notifications = [];
+        let selectedExamsList = [];
+
         const daysArabic = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+        const entryTypeBadges = {
+            'اعتذار': '<span class="bg-red-100 text-red-800 border border-red-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🔴 اعتذار</span>',
+            'اعتذار فترة': '<span class="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟣 اعتذار فترة</span>',
+            'إضافة عيادة': '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟢 إضافة عيادة</span>',
+            'تعديل': '<span class="bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟠 تعديل</span>'
+        };
+
+        function handleClinicChange() {
+            const clinicVal = document.getElementById('clinic').value;
+            const selectEl = document.getElementById('examTypeSelect');
+            const hintEl = document.getElementById('examTypeHint');
+
+            if (clinicVal === 'فحص') {
+                selectEl.disabled = false;
+                selectEl.className = "w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white text-gray-900 cursor-pointer focus:ring-2 focus:ring-red-500 outline-none transition";
+                hintEl.innerText = "اختر فحصاً من القائمة لإضافته كعلامة أدناه";
+                hintEl.className = "text-[10px] text-gray-600 font-bold mt-1";
+            } else {
+                selectEl.disabled = true;
+                selectEl.value = "";
+                selectEl.className = "w-full border border-gray-300 rounded-lg p-2.5 text-sm font-bold bg-gray-100 text-gray-400 cursor-not-allowed outline-none transition";
+                hintEl.innerText = "يتطلب اختيار 'فحص' لتفعيل القائمة";
+                hintEl.className = "text-[10px] text-gray-400 font-bold mt-1";
+                selectedExamsList = [];
+                renderSelectedExamTags();
+            }
+        }
+
+        // اختيار خيار All يظهر كلمة All فقط بدلاً من عرض كل الفحوصات التفصيلية
+        function handleExamTypeSelect(selectEl) {
+            const val = selectEl.value;
+            if (!val) return;
+
+            if (val === 'All') {
+                selectedExamsList = ['All'];
+            } else {
+                selectedExamsList = selectedExamsList.filter(e => e !== 'All');
+                if (!selectedExamsList.includes(val)) {
+                    selectedExamsList.push(val);
+                }
+            }
+
+            selectEl.value = "";
+            renderSelectedExamTags();
+        }
+
+        function removeExamTag(examName) {
+            selectedExamsList = selectedExamsList.filter(e => e !== examName);
+            renderSelectedExamTags();
+        }
+
+        function renderSelectedExamTags() {
+            const container = document.getElementById('selectedExamsTags');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (selectedExamsList.length === 0) return;
+
+            selectedExamsList.forEach(exam => {
+                const tag = document.createElement('span');
+                tag.className = "bg-gray-100 text-gray-800 border border-gray-300 px-2.5 py-1 rounded-lg font-bold text-xs shadow-sm inline-flex items-center gap-1.5";
+                tag.innerHTML = `
+                    <span>${exam}</span>
+                    <button type="button" onclick="removeExamTag('${exam}')" class="text-gray-500 hover:text-red-700 font-bold text-xs p-0.5 rounded-full hover:bg-gray-200 transition">✕</button>
+                `;
+                container.appendChild(tag);
+            });
+        }
+
+        function getSelectedExamsString() {
+            return selectedExamsList.length > 0 ? selectedExamsList.join(', ') : '-';
+        }
+
+        function handleEntryTypeChange() {
+            const type = document.getElementById('entryType').value;
+            const timeFromDiv = document.getElementById('timeFromContainer');
+            const timeToDiv = document.getElementById('timeToContainer');
+            const endDateDiv = document.getElementById('endDateContainer');
+            const dateLabel = document.getElementById('dateLabel');
+
+            if (type === 'اعتذار فترة') {
+                timeFromDiv.classList.add('hidden');
+                timeToDiv.classList.add('hidden');
+                endDateDiv.classList.remove('hidden');
+                dateLabel.innerText = "من تاريخ (بدء الفترة) *";
+                document.getElementById('timeFrom').required = false;
+                document.getElementById('timeTo').required = false;
+                document.getElementById('endDate').required = true;
+            } else {
+                timeFromDiv.classList.remove('hidden');
+                timeToDiv.classList.remove('hidden');
+                endDateDiv.classList.add('hidden');
+                dateLabel.innerText = "التاريخ *";
+                document.getElementById('timeFrom').required = true;
+                document.getElementById('timeTo').required = true;
+                document.getElementById('endDate').required = false;
+            }
+        }
 
         async function initPage() {
             const client = getSupabase();
@@ -251,10 +394,26 @@
             const { data, error } = await client.from('doctor_absences').select('*').order('id', { ascending: false });
             if (!error && data) {
                 absences = data.map(item => ({
-                    id: item.id, doctorName: item.doctor_name, clinic: item.clinic, branch: item.branch,
-                    date: item.date, day: item.day, timeFrom: item.time_from, timeTo: item.time_to,
-                    substituteDoctor: item.substitute_doctor, notes: item.notes, ccChecked: Boolean(item.cc_checked),
-                    ccCheckedBy: item.cc_checked_by || '', ccCheckedTimestamp: item.cc_checked_timestamp ? new Date(item.cc_checked_timestamp).getTime() : null
+                    id: item.id,
+                    entryType: item.entry_type || 'اعتذار',
+                    doctorName: item.doctor_name, 
+                    clinic: item.clinic, 
+                    examType: item.exam_type || '-',
+                    branch: item.branch,
+                    date: item.date, 
+                    endDate: item.end_date || null,
+                    day: item.day, 
+                    timeFrom: item.time_from, 
+                    timeTo: item.time_to,
+                    substituteDoctor: item.substitute_doctor, 
+                    notes: item.notes, 
+                    ccSeen: Boolean(item.cc_seen),
+                    ccSeenBy: item.cc_seen_by || '',
+                    ccSeenTimestamp: item.cc_seen_timestamp ? new Date(item.cc_seen_timestamp).getTime() : null,
+                    ccExecuted: Boolean(item.cc_executed),
+                    ccExecutedBy: item.cc_executed_by || '',
+                    ccExecutedTimestamp: item.cc_executed_timestamp ? new Date(item.cc_executed_timestamp).getTime() : null,
+                    createdTimestamp: item.created_at ? new Date(item.created_at).getTime() : Date.now()
                 }));
                 renderTable();
             }
@@ -265,16 +424,32 @@
             if (currentUser.role === 'viewer' || currentUser.role === 'callcenter') return;
 
             const editId = document.getElementById('editingAbsenceId').value;
+            const entryTypeVal = document.getElementById('entryType').value;
+            const clinicVal = document.getElementById('clinic').value;
+            
+            let examTypeVal = '-';
+            if (clinicVal === 'فحص') {
+                examTypeVal = getSelectedExamsString();
+                if (examTypeVal === '-') {
+                    alert('يرجى اختيار نوع الفحص على الأقل من القائمة');
+                    return;
+                }
+            }
+
+            const isPeriod = entryTypeVal === 'اعتذار فترة';
             const client = getSupabase();
 
             const absencePayload = {
+                entry_type: entryTypeVal,
                 doctor_name: document.getElementById('doctorName').value,
-                clinic: document.getElementById('clinic').value,
+                clinic: clinicVal,
+                exam_type: examTypeVal,
                 branch: document.getElementById('branch').value,
                 date: document.getElementById('date').value,
+                end_date: isPeriod ? document.getElementById('endDate').value : null,
                 day: document.getElementById('day').value,
-                time_from: document.getElementById('timeFrom').value,
-                time_to: document.getElementById('timeTo').value,
+                time_from: isPeriod ? 'طوال الفترة' : document.getElementById('timeFrom').value,
+                time_to: isPeriod ? 'طوال الفترة' : document.getElementById('timeTo').value,
                 substitute_doctor: document.getElementById('substituteDoctor').value || '-',
                 notes: document.getElementById('notes').value || '-'
             };
@@ -282,16 +457,19 @@
             if (client) {
                 if (editId) {
                     await client.from('doctor_absences').update(absencePayload).eq('id', editId);
-                    await createLog('تعديل اعتذار', `تم تعديل بيانات اعتذار الطبيب (${absencePayload.doctor_name}) بواسطة (${currentUser.name})`);
+                    await createLog('تعديل طلب', `تم تعديل بيانات إجراء (${absencePayload.entry_type}) للطبيب (${absencePayload.doctor_name})`);
                 } else {
                     const { error } = await client.from('doctor_absences').insert([absencePayload]);
                     if (error) {
                         alert("⚠️ فشل الحفظ أونلاين: " + error.message);
                         return;
                     }
-                    await createLog('إضافة اعتذار', `تم حجز/إضافة اعتذار جديد للطبيب (${absencePayload.doctor_name}) - ${absencePayload.branch} بواسطة (${currentUser.name})`);
+                    const detailText = isPeriod 
+                        ? `من ${absencePayload.date} إلى ${absencePayload.end_date}` 
+                        : `بتاريخ ${absencePayload.date}`;
+                    await createLog('إضافة طلب', `تم تسجيل (${absencePayload.entry_type}) جديد للطبيب (${absencePayload.doctor_name}) - ${absencePayload.branch} (${detailText})`);
                     
-                    const notifText = `📢 تم إضافة اعتذار جديد للطبيب (${absencePayload.doctor_name}) - ${absencePayload.branch} بواسطة (${currentUser.name})`;
+                    const notifText = `📢 تم تسجيل (${absencePayload.entry_type}) جديد للطبيب (${absencePayload.doctor_name}) - ${absencePayload.branch} بواسطة (${currentUser.name})`;
                     await addNotification(notifText);
                 }
             }
@@ -299,24 +477,53 @@
             resetAbsenceForm();
         });
 
-        // تأكيد الملاحظة وتسجيل اسم اليوزر الفعلي الإجرائي
-        async function toggleCallCenterCheck(id) {
+        async function toggleCallCenterSeen(id) {
             if (currentUser.role !== 'callcenter' && currentUser.role !== 'admin') return;
             const item = absences.find(a => a.id === id);
-            if (!item || item.ccChecked) return;
+            if (!item || item.ccSeen) return;
 
             const client = getSupabase();
             const nowIso = new Date().toISOString();
 
             if (client) {
                 await client.from('doctor_absences').update({
-                    cc_checked: true, cc_checked_by: currentUser.name, cc_checked_timestamp: nowIso
+                    cc_seen: true, cc_seen_by: currentUser.name, cc_seen_timestamp: nowIso
                 }).eq('id', id);
             }
 
-            const notifMsg = `✅ قام (${currentUser.name}) بتأكيد ملاحظة اعتذار د. (${item.doctorName}) - ${item.branch}`;
+            const notifMsg = `👁️ قام (${currentUser.name}) برؤية طلب د. (${item.doctorName}) - ${item.branch}`;
             await addNotification(notifMsg);
-            await createLog('تأكيد ملاحظة', `قام (${currentUser.name}) بتأكيد ملاحظة الطبيب (${item.doctorName}) - ${item.branch}`);
+            await createLog('رؤية طلب', `قام (${currentUser.name}) بتم الرؤية لطلب الطبيب (${item.doctorName}) - ${item.branch}`);
+            fetchAbsences();
+        }
+
+        async function toggleCallCenterExecuted(id) {
+            if (currentUser.role !== 'callcenter' && currentUser.role !== 'admin') return;
+            const item = absences.find(a => a.id === id);
+            if (!item) return;
+
+            if (!item.ccSeen) {
+                alert('عذراً، يجب الضغط على "تم الرؤية" أولاً قبل إجراء "تم التنفيذ"!');
+                return;
+            }
+
+            if (item.ccExecuted) {
+                alert('تم التنفيذ بالفعل ولا يمكن إلغاؤه!');
+                return;
+            }
+
+            const client = getSupabase();
+            const nowIso = new Date().toISOString();
+
+            if (client) {
+                await client.from('doctor_absences').update({
+                    cc_executed: true, cc_executed_by: currentUser.name, cc_executed_timestamp: nowIso
+                }).eq('id', id);
+            }
+
+            const notifMsg = `✅ قام (${currentUser.name}) بتنفيذ طلب د. (${item.doctorName}) - ${item.branch}`;
+            await addNotification(notifMsg);
+            await createLog('تنفيذ طلب', `قام (${currentUser.name}) بتنفيذ طلب الطبيب (${item.doctorName}) - ${item.branch}`);
             fetchAbsences();
         }
 
@@ -326,53 +533,105 @@
             const now = Date.now();
 
             const currentData = dataToRender.filter(item => {
-                if (item.ccChecked && item.ccCheckedTimestamp) {
-                    return ((now - item.ccCheckedTimestamp) / 1000) < 60;
+                if (item.ccExecuted && item.ccExecutedTimestamp) {
+                    return ((now - item.ccExecutedTimestamp) / 1000) < 60;
                 }
                 return true;
             });
 
             if (currentData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" class="p-8 text-gray-500 font-bold text-lg">لا توجد اعتذارات مسجلة حتى الآن</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" class="p-8 text-gray-500 font-bold text-lg">لا توجد حركات أو اعتذارات مسجلة حتى الآن</td></tr>`;
                 return;
             }
 
             currentData.forEach((item, index) => {
                 const tr = document.createElement('tr');
-                tr.className = index % 2 === 0 ? 'bg-white hover:bg-gray-100' : 'bg-gray-50 hover:bg-gray-100';
+                tr.className = index % 2 === 0 ? 'bg-white hover:bg-amber-50/60 transition duration-150' : 'bg-slate-50/70 hover:bg-amber-50/60 transition duration-150';
+
+                const canEdit = (currentUser.role === 'admin');
+                const createdTime = item.createdTimestamp || now;
+                const elapsedSeconds = (now - createdTime) / 1000;
+                const canEditorDelete = (elapsedSeconds <= 360);
+                const canDelete = (currentUser.role === 'admin') || (currentUser.role === 'editor' && canEditorDelete);
 
                 let actionButtons = '';
-                if (currentUser.role === 'admin' || currentUser.role === 'editor') {
+                if (canEdit || canDelete) {
+                    let editBtnHTML = canEdit ? `<button onclick="editAbsence(${item.id})" class="bg-blue-50 hover:bg-blue-100 text-blue-600 p-1.5 rounded-lg border border-blue-200 transition shadow-sm font-black" title="تعديل">✏️</button>` : '';
+                    let deleteBtnHTML = canDelete ? `<button onclick="deleteItem(${item.id})" class="bg-red-50 hover:bg-red-100 text-red-600 p-1.5 rounded-lg border border-red-200 transition shadow-sm font-black" title="حذف">❌</button>` : '';
+
+                    let deleteTimerBadge = '';
+                    if (currentUser.role === 'editor' && canEditorDelete) {
+                        const remainingDeleteSec = Math.max(0, Math.ceil(360 - elapsedSeconds));
+                        const mins = Math.floor(remainingDeleteSec / 60);
+                        const secs = remainingDeleteSec % 60;
+                        deleteTimerBadge = `<span class="text-[10px] text-red-600 font-bold block mt-0.5">متاح للحذف (${mins}:${secs < 10 ? '0' : ''}${secs})</span>`;
+                    }
+
                     actionButtons = `
-                        <td class="p-3 no-print flex justify-center gap-2">
-                            <button onclick="editAbsence(${item.id})" class="text-blue-600 hover:text-blue-800 font-black text-lg p-1">✏️</button>
-                            <button onclick="deleteItem(${item.id})" class="text-red-600 hover:text-red-800 font-black text-lg p-1">❌</button>
+                        <td class="py-3 px-2 no-print">
+                            <div class="flex justify-center gap-1.5 items-center">
+                                ${editBtnHTML}
+                                ${deleteBtnHTML}
+                            </div>
+                            ${deleteTimerBadge}
                         </td>
                     `;
                 }
 
                 const isCC = currentUser.role === 'callcenter' || currentUser.role === 'admin';
-                const timerBadge = (item.ccChecked && item.ccCheckedTimestamp) ? 
-                    `<div class="text-[11px] text-emerald-700 font-bold">✔️ تأكيد: ${item.ccCheckedBy}</div>
-                     <div class="text-[11px] text-red-600 font-extrabold animate-pulse">⏱️ يختفي خلال ${Math.max(0, Math.ceil(60 - ((now - item.ccCheckedTimestamp) / 1000)))} ثانية</div>` : '';
+
+                let seenBadgeHTML = item.ccSeen ? `<div class="text-[10px] text-blue-700 font-bold mt-1">👁️ رؤية: ${item.ccSeenBy}</div>` : '';
+                let executedBadgeHTML = item.ccExecuted ? `<div class="text-[10px] text-emerald-700 font-bold mt-0.5">✅ تنفيذ: ${item.ccExecutedBy}</div>` : '';
+                
+                let timerBadge = '';
+                if (item.ccExecuted && item.ccExecutedTimestamp) {
+                    const remaining = Math.max(0, Math.ceil(60 - ((now - item.ccExecutedTimestamp) / 1000)));
+                    timerBadge = `<div class="text-[11px] text-red-600 font-extrabold animate-pulse mt-0.5">⏱️ يختفي خلال ${remaining} ثانية</div>`;
+                }
+
+                const dateDisplay = (item.entryType === 'اعتذار فترة' && item.endDate)
+                    ? `<span class="text-purple-900 font-black">من ${item.date}<br>إلى ${item.endDate}</span>`
+                    : item.date;
+
+                let clinicDisplay = clinicBadges[item.clinic] || item.clinic;
+                if (item.clinic === 'فحص' && item.examType && item.examType !== '-') {
+                    clinicDisplay += ` <span class="bg-gray-200 text-gray-800 border border-gray-300 px-2 py-0.5 rounded-md text-xs font-bold mr-1 shadow-sm">${item.examType}</span>`;
+                }
+
+                const isExecutedDisabled = (!isCC || item.ccExecuted || !item.ccSeen);
 
                 tr.innerHTML = `
-                    <td class="p-3 border-l font-black">${index + 1}</td>
-                    <td class="p-3 border-l font-black text-red-600">${item.doctorName}</td>
-                    <td class="p-3 border-l font-bold">${clinicBadges[item.clinic] || item.clinic}</td>
-                    <td class="p-3 border-l font-bold">${branchBadges[item.branch] || item.branch}</td>
-                    <td class="p-3 border-l font-bold">${item.date}</td>
-                    <td class="p-3 border-l font-bold">${item.day}</td>
-                    <td class="p-3 border-l font-bold">${item.timeFrom}</td>
-                    <td class="p-3 border-l font-bold">${item.timeTo}</td>
-                    <td class="p-3 border-l font-black text-red-600">${item.substituteDoctor}</td>
-                    <td class="p-3 border-l font-semibold text-sm">
-                        <div class="flex items-center justify-center gap-2">
-                            <input type="checkbox" onchange="toggleCallCenterCheck(${item.id})" ${item.ccChecked ? 'checked disabled' : (!isCC ? 'disabled' : '')} class="w-5 h-5 accent-emerald-600">
-                            <span>${item.notes}</span>
+                    <td class="py-3 px-2 border-l border-gray-200 font-black text-slate-700">${index + 1}</td>
+                    <td class="py-3 px-2 border-l border-gray-200 font-bold">${entryTypeBadges[item.entryType] || item.entryType}</td>
+                    <td class="py-3 px-2 border-l border-gray-200 font-black text-red-600 bg-red-50/30">${item.doctorName}</td>
+                    <td class="py-3 px-2 border-l border-gray-200 font-bold">${clinicDisplay}</td>
+                    <td class="py-3 px-2 border-l border-gray-200 font-bold">${branchBadges[item.branch] || item.branch}</td>
+                    <td class="py-3 px-2 border-l border-gray-200 font-bold">${dateDisplay}</td>
+                    <td class="py-3 px-2 border-l border-gray-200 font-bold text-slate-700">${item.day}</td>
+                    <td class="py-3 px-2 border-l border-gray-200 font-bold text-slate-700">${item.timeFrom}</td>
+                    <td class="py-3 px-2 border-l border-gray-200 font-bold text-slate-700">${item.timeTo}</td>
+                    <td class="py-3 px-2 border-l border-gray-200 font-black text-red-600 bg-red-50/30">${item.substituteDoctor}</td>
+                    
+                    <td class="py-3 px-2 border-l border-gray-200 font-semibold text-sm">
+                        <div class="text-xs font-bold text-slate-800 mb-1.5">${item.notes}</div>
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-2.5 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
+                            <!-- تم الرؤية -->
+                            <label class="inline-flex items-center gap-1 cursor-pointer select-none text-xs font-bold text-blue-900">
+                                <input type="checkbox" onchange="toggleCallCenterSeen(${item.id})" ${item.ccSeen ? 'checked disabled' : (!isCC ? 'disabled' : '')} class="w-4 h-4 accent-blue-600">
+                                <span>تم الرؤية</span>
+                            </label>
+
+                            <!-- تم التنفيذ -->
+                            <label class="inline-flex items-center gap-1 select-none text-xs font-bold ${!item.ccSeen ? 'text-gray-400 opacity-60' : 'text-emerald-900 cursor-pointer'}">
+                                <input type="checkbox" onchange="toggleCallCenterExecuted(${item.id})" ${item.ccExecuted ? 'checked disabled' : (isExecutedDisabled ? 'disabled' : '')} class="w-4 h-4 accent-emerald-600 ${!item.ccSeen ? 'cursor-not-allowed' : 'cursor-pointer'}">
+                                <span>تم التنفيذ</span>
+                            </label>
                         </div>
+                        ${seenBadgeHTML}
+                        ${executedBadgeHTML}
                         ${timerBadge}
                     </td>
+
                     ${actionButtons}
                 `;
                 tbody.appendChild(tr);
@@ -380,21 +639,34 @@
         }
 
         function editAbsence(id) {
+            if (currentUser.role !== 'admin') return;
+
             const item = absences.find(a => a.id === id);
             if (!item) return;
 
             document.getElementById('editingAbsenceId').value = item.id;
+            document.getElementById('entryType').value = item.entryType || 'اعتذار';
+            handleEntryTypeChange();
+
             document.getElementById('doctorName').value = item.doctorName;
             document.getElementById('clinic').value = item.clinic;
+            handleClinicChange();
+
+            if (item.clinic === 'فحص' && item.examType && item.examType !== '-') {
+                selectedExamsList = item.examType.split(', ').map(v => v.trim());
+                renderSelectedExamTags();
+            }
+
             document.getElementById('branch').value = item.branch;
             document.getElementById('date').value = item.date;
+            if (item.endDate) document.getElementById('endDate').value = item.endDate;
             document.getElementById('day').value = item.day;
             document.getElementById('timeFrom').value = item.timeFrom;
             document.getElementById('timeTo').value = item.timeTo;
             document.getElementById('substituteDoctor').value = item.substituteDoctor === '-' ? '' : item.substituteDoctor;
             document.getElementById('notes').value = item.notes === '-' ? '' : item.notes;
 
-            document.getElementById('absenceFormTitle').innerHTML = '✏️ تعديل بيانات الاعتذار';
+            document.getElementById('absenceFormTitle').innerHTML = '✏️ تعديل بيانات الطلب';
             document.getElementById('absenceSubmitBtn').innerText = 'تحديث التعديلات';
             document.getElementById('absenceCancelBtn').classList.remove('hidden');
             document.getElementById('addFormSection').scrollIntoView({ behavior: 'smooth' });
@@ -403,26 +675,43 @@
         function resetAbsenceForm() {
             document.getElementById('absenceForm').reset();
             document.getElementById('editingAbsenceId').value = '';
-            document.getElementById('absenceFormTitle').innerHTML = '➕ إضافة اعتذار جديد';
+            document.getElementById('entryType').value = 'اعتذار';
+            selectedExamsList = [];
+            renderSelectedExamTags();
+            handleEntryTypeChange();
+            handleClinicChange();
+            document.getElementById('absenceFormTitle').innerHTML = '➕ إضافة طلب / إجراء جديد';
             document.getElementById('absenceSubmitBtn').innerText = 'حفظ البيانات';
             document.getElementById('absenceCancelBtn').classList.add('hidden');
         }
 
         async function deleteItem(id) {
+            const target = absences.find(a => a.id === id);
+            if (!target) return;
+
+            const now = Date.now();
+            const createdTime = target.createdTimestamp || now;
+            const elapsedSeconds = (now - createdTime) / 1000;
+
+            if (currentUser.role !== 'admin' && (currentUser.role !== 'editor' || elapsedSeconds > 360)) {
+                alert('عذراً، انتهت مهلة الـ 6 دقائق المتاحة للحذف!');
+                return;
+            }
+
             if (confirm('هل أنت تأكد من حذف هذا السجل؟')) {
-                const target = absences.find(a => a.id === id);
                 const client = getSupabase();
                 if (client) await client.from('doctor_absences').delete().eq('id', id);
-                await createLog('حذف اعتذار', `تم حذف الاعتذار للطبيب (${target ? target.doctorName : ''}) بواسطة (${currentUser.name})`);
+                await createLog('حذف طلب', `تم حذف الإجراء/الطلب للطبيب (${target ? target.doctorName : ''}) بواسطة (${currentUser.name})`);
                 fetchAbsences();
             }
         }
 
         async function clearAllData() {
+            if (currentUser.role !== 'admin') return;
             if (confirm('تنبيه للمدير: هل تريد مسح جميع البيانات؟')) {
                 const client = getSupabase();
                 if (client) await client.from('doctor_absences').delete().neq('id', 0);
-                await createLog('مسح الكل', `قام المدير (${currentUser.name}) بمسح الجداول بالكامل`);
+                await createLog('مسح الكل', 'قام المدير بمسح الجداول بالكامل');
                 fetchAbsences();
             }
         }
@@ -434,7 +723,7 @@
 
         function filterTable() {
             const query = document.getElementById('searchInput').value.toLowerCase();
-            renderTable(absences.filter(i => i.doctorName.toLowerCase().includes(query) || i.branch.toLowerCase().includes(query)));
+            renderTable(absences.filter(i => i.doctorName.toLowerCase().includes(query) || i.branch.toLowerCase().includes(query) || (i.entryType && i.entryType.toLowerCase().includes(query)) || (i.examType && i.examType.toLowerCase().includes(query))));
         }
 
         async function fetchNotifications() {
@@ -469,7 +758,7 @@
               .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doctor_absences' }, (payload) => {
                   fetchAbsences();
                   playNotificationSound();
-                  showToast(`📢 تم إضافة اعتذار جديد للطبيب (${payload.new.doctor_name}) - ${payload.new.branch}`, 'success');
+                  showToast(`📢 تم إضافة (${payload.new.entry_type || 'إجراء'}) جديد للطبيب (${payload.new.doctor_name}) - ${payload.new.branch}`, 'success');
               })
               .on('postgres_changes', { event: '*', schema: 'public', table: 'doctor_absences' }, () => fetchAbsences())
               .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {

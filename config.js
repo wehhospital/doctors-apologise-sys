@@ -46,8 +46,17 @@ function getSupabase() {
       viewer: '<span class="text-green-700 bg-green-100 border border-green-200 px-2.5 py-1 rounded-full text-xs">🟢 عرض فقط</span>'
   };
   
-  // 2. دالة تشغيل صوت الإشعارات
+  // 2. دالة تشغيل صوت الإشعارات الافتراضي مع المانع الذكي للتكرار
+  let lastSoundPlayTime = 0;
+  
   function playNotificationSound() {
+      const now = Date.now();
+      // يمنع إعادة تشغيل الصوت إذا صدر أمر جديد خلال أقل من ثانيتين (2000ms)
+      if (now - lastSoundPlayTime < 2000) {
+          return;
+      }
+      lastSoundPlayTime = now;
+  
       try {
           const audio = new Audio('./assets/mixkit-software-interface-start-2574.wav');
           audio.volume = 0.6;
@@ -108,7 +117,7 @@ function getSupabase() {
       }, 4000);
   }
   
-  // 4. دالة فتح وإغلاق قائمة الإشعارات المضمونة
+  // 4. دالة فتح وإغلاق قائمة الإشعارات
   document.addEventListener('click', function(e) {
       const notifContainer = document.getElementById('notifContainer');
       const notifMenu = document.getElementById('notifMenu');
@@ -155,7 +164,7 @@ function getSupabase() {
       window.location.href = 'login.html';
   }
   
-  // 6. دالة تسجيل اللوجز الشاملة لجميع المستخدمين بـ await
+  // 6. دالة تسجيل السجلات الشاملة
   async function createLog(actionType, details) {
       const currentUser = JSON.parse(localStorage.getItem('currentUser'));
       const userName = currentUser ? currentUser.name : (document.getElementById('username')?.value || 'مستخدم');
@@ -179,12 +188,7 @@ function getSupabase() {
               action: actionType,
               details: details
           }]);
-  
-          if (error) {
-              console.error("⚠️ خطأ حفظ اللوج في سوبا بيز:", error.message);
-          } else {
-              console.log("✅ تم حفظ اللوج أونلاين بنجاح:", actionType);
-          }
+          if (error) console.error("⚠️ خطأ حفظ اللوج:", error.message);
       }
   }
   
