@@ -58,6 +58,7 @@
         <!-- أزرار التنقل بين الصفحات -->
         <div class="flex gap-2 border-b border-gray-300 pb-2 no-print overflow-x-auto">
             <a href="index.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-red-600 text-white shadow">📋 جدول الاعتذارات والطلبات</a>
+            <a href="reports.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow">📊 التقارير والإحصائيات</a>
             <a id="navUsersBtn" href="users.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">👥 إدارة المستخدمين</a>
             <a id="navLogsBtn" href="logs.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">📜 سجل العمليات (Logs)</a>
         </div>
@@ -218,7 +219,7 @@
             </div>
         </div>
 
-        <!-- الجدول الرئيسي المصمم بأنقة وحرفية عالية -->
+        <!-- الجدول الرئيسي -->
         <div class="bg-white rounded-2xl shadow-xl overflow-hidden print-table border border-gray-300 w-full">
             <table class="w-full text-center border-collapse">
                 <thead>
@@ -250,12 +251,20 @@
         let selectedExamsList = [];
 
         const daysArabic = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+        const allExamOptionsList = ["OCT 1", "OCT 2", "Optos", "Ultrasound", "BIO", "PentaCam", "Specular", "VEP/ERG", "Hess Screen Test"];
 
         const entryTypeBadges = {
             'اعتذار': '<span class="bg-red-100 text-red-800 border border-red-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🔴 اعتذار</span>',
             'اعتذار فترة': '<span class="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟣 اعتذار فترة</span>',
             'إضافة عيادة': '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟢 إضافة عيادة</span>',
             'تعديل': '<span class="bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟠 تعديل</span>'
+        };
+
+        const entryTypeCellStyles = {
+            'اعتذار': 'bg-red-500 text-white font-black border-l border-red-600',
+            'اعتذار فترة': 'bg-purple-600 text-white font-black border-l border-purple-700',
+            'إضافة عيادة': 'bg-emerald-600 text-white font-black border-l border-emerald-700',
+            'تعديل': 'bg-amber-500 text-white font-black border-l border-amber-600'
         };
 
         function handleClinicChange() {
@@ -279,7 +288,6 @@
             }
         }
 
-        // اختيار خيار All يظهر كلمة All فقط بدلاً من عرض كل الفحوصات التفصيلية
         function handleExamTypeSelect(selectEl) {
             const val = selectEl.value;
             if (!val) return;
@@ -431,7 +439,7 @@
             if (clinicVal === 'فحص') {
                 examTypeVal = getSelectedExamsString();
                 if (examTypeVal === '-') {
-                    alert('يرجى اختيار نوع الفحص على الأقل من القائمة');
+                    alert('يرجى اختيار نوع الفحص على الأقل من القائمة (OCT / Optos / All)');
                     return;
                 }
             }
@@ -451,7 +459,8 @@
                 time_from: isPeriod ? 'طوال الفترة' : document.getElementById('timeFrom').value,
                 time_to: isPeriod ? 'طوال الفترة' : document.getElementById('timeTo').value,
                 substitute_doctor: document.getElementById('substituteDoctor').value || '-',
-                notes: document.getElementById('notes').value || '-'
+                notes: document.getElementById('notes').value || '-',
+                created_by_name: currentUser ? currentUser.name : 'مستخدم'
             };
 
             if (client) {
@@ -593,16 +602,25 @@
                     ? `<span class="text-purple-900 font-black">من ${item.date}<br>إلى ${item.endDate}</span>`
                     : item.date;
 
+                // 🟨 تنسيق عرض نوع الفحص بالاسم فقط دون كلمة فحص
                 let clinicDisplay = clinicBadges[item.clinic] || item.clinic;
                 if (item.clinic === 'فحص' && item.examType && item.examType !== '-') {
-                    clinicDisplay += ` <span class="bg-gray-200 text-gray-800 border border-gray-300 px-2 py-0.5 rounded-md text-xs font-bold mr-1 shadow-sm">${item.examType}</span>`;
+                    clinicDisplay = `<span class="bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟨 ${item.examType}</span>`;
                 }
 
                 const isExecutedDisabled = (!isCC || item.ccExecuted || !item.ccSeen);
+                
+                // 🔴 الخلية الخارجية تملأ البوكس بالكامل باللون الخاص بـ نوع الإجراء
+                const cellBgClass = entryTypeCellStyles[item.entryType] || 'border-l border-gray-200 font-bold text-slate-800';
 
                 tr.innerHTML = `
                     <td class="py-3 px-2 border-l border-gray-200 font-black text-slate-700">${index + 1}</td>
-                    <td class="py-3 px-2 border-l border-gray-200 font-bold">${entryTypeBadges[item.entryType] || item.entryType}</td>
+                    
+                    <!-- 🔴 الخلية بالكامل تأخذ اللون بدون فواصل بيضاء -->
+                    <td class="py-3 px-3 text-center text-sm ${cellBgClass}">
+                        ${item.entryType}
+                    </td>
+
                     <td class="py-3 px-2 border-l border-gray-200 font-black text-red-600 bg-red-50/30">${item.doctorName}</td>
                     <td class="py-3 px-2 border-l border-gray-200 font-bold">${clinicDisplay}</td>
                     <td class="py-3 px-2 border-l border-gray-200 font-bold">${branchBadges[item.branch] || item.branch}</td>
