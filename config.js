@@ -51,7 +51,6 @@ function getSupabase() {
   
   function playNotificationSound() {
       const now = Date.now();
-      // يمنع إعادة تشغيل الصوت إذا صدر أمر جديد خلال أقل من ثانيتين (2000ms)
       if (now - lastSoundPlayTime < 2000) {
           return;
       }
@@ -139,17 +138,20 @@ function getSupabase() {
       }
   }
   
-  // 5. دالة التحقق من الجلسة والصلاحيات
-  function checkAuth(requiredRole = null) {
+  // 5. دالة التحقق من الجلسة والصلاحيات (تدعم مصفوفة صلاحيات)
+  function checkAuth(allowedRoles = null) {
       const currentUser = JSON.parse(localStorage.getItem('currentUser'));
       if (!currentUser) {
           window.location.href = 'login.html';
           return null;
       }
-      if (requiredRole && currentUser.role !== requiredRole) {
-          alert('عذراً، هذه الصفحة مخصصة لمدير النظام فقط!');
-          window.location.href = 'index.html';
-          return null;
+      if (allowedRoles) {
+          const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+          if (!rolesArray.includes(currentUser.role)) {
+              alert('عذراً، ليس لديك صلاحية للوصول لهذه الصفحة!');
+              window.location.href = 'index.html';
+              return null;
+          }
       }
       return currentUser;
   }
@@ -272,4 +274,48 @@ function getSupabase() {
           `;
           list.appendChild(item);
       });
+  }
+
+  // 8. دالة نسخ نص منسق للواتساب
+  function copyWhatsAppText(docName, entryType, clinic, branch, date, endDate, day, timeFrom, timeTo, notes, reason) {
+      let text = `📢 *تنبيه بشأن جدول الأطباء*\n\n`;
+      text += `🔹 *نوع الإجراء:* ${entryType}\n`;
+      text += `👨‍⚕️ *الطبيب:* ${docName}\n`;
+      text += `🏥 *الفرع والنوع:* ${branch} (${clinic})\n`;
+      text += (entryType === 'اعتذار فترة' && endDate) ? `📅 *الفترة:* من ${date} إلى ${endDate}\n` : `📅 *التاريخ:* ${date} (${day})\n`;
+      if (timeFrom && timeFrom !== 'طوال الفترة') text += `⏰ *الوقت:* من ${timeFrom} إلى ${timeTo}\n`;
+      if (reason && reason !== '-') text += `📌 *السبب:* ${reason}\n`;
+      if (notes && notes !== '-') text += `📝 *ملاحظات:* ${notes}\n`;
+
+      navigator.clipboard.writeText(text).then(() => {
+          showToast('📱 تم نسخ التنبيه المنسق للواتساب بنجاح!', 'success');
+      }).catch(() => {
+          alert("الرسالة:\n" + text);
+      });
+  }
+
+  // 9. دالة تصدير البيانات إلى ملف أكسيل CSV مع إتاحة اللغة العربية
+  function exportToCSV(filename, headers, rows) {
+      let csvContent = "\uFEFF"; // UTF-8 BOM للأحرف العربية
+      csvContent += headers.join(",") + "\n";
+
+      rows.forEach(row => {
+          let rowData = row.map(val => {
+              let clean = (val === null || val === undefined) ? '' : String(val).replace(/"/g, '""');
+              return `"${clean}"`;
+          });
+          csvContent += rowData.join(",") + "\n";
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      if (link.download !== undefined) {
+          const url = URL.createObjectURL(blob);
+          link.setAttribute("href", url);
+          link.setAttribute("download", filename);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+      }
   }

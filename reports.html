@@ -36,6 +36,9 @@
 </head>
 <body class="bg-gray-100 min-h-screen p-2 md:p-4">
 
+    <!-- حاوية الإشعارات المنبثقة الفورية -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 no-print"></div>
+
     <div class="w-full max-w-[99%] mx-auto space-y-4">
         
         <!-- هيدر رسمي يظهر في الطباعة فقط -->
@@ -44,11 +47,11 @@
             <p id="printMetaInfo" class="text-xs font-bold text-gray-700 mt-1"></p>
         </div>
 
-        <!-- الشريط العلوي الشاشة -->
+        <!-- الشريط العلوي للشاشة -->
         <div class="bg-white p-4 md:p-5 rounded-xl shadow-md border-t-4 border-gray-800 flex justify-between items-center no-print">
             <div>
                 <h1 class="text-2xl md:text-3xl font-black text-gray-900">📊 تقارير وإحصائيات الاعتذارات والطلبات</h1>
-                <p class="text-gray-600 text-xs font-bold mt-1">عرض تفصيلي رسمي للاعتذارات ومُدَدها وأوقات إدخالها بالنظام</p>
+                <p class="text-gray-600 text-xs font-bold mt-1">Made By Abdallah - IT Department</p>
             </div>
             <div class="flex items-center gap-3">
                 <div class="text-right">
@@ -67,18 +70,48 @@
             <a id="navLogsBtn" href="logs.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">📜 سجل العمليات (Logs)</a>
         </div>
 
-        <!-- أشرطة الفلترة والبحث السريع -->
+        <!-- أشرطة الفلترة والبحث السريع والفلترة بالتواريخ -->
         <div class="bg-white p-4 rounded-xl shadow-md space-y-3 no-print">
-            <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div class="flex-1 w-full">
-                    <input type="text" id="searchInput" onkeyup="filterReport()" placeholder="🔍 بحث عن اسم طبيب، يوزر مُدخل، فرع، أو نوع الإجراء..." class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-gray-800">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-600 mb-1">🔍 بحث نصي الشامل:</label>
+                    <input type="text" id="searchInput" onkeyup="filterReport()" placeholder="بحث باسم الطبيب، اليوزر، الفرع، السبب، أو النوع..." class="w-full border border-gray-400 rounded-lg p-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-gray-800">
                 </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">📅 من تاريخ:</label>
+                    <input type="date" id="reportDateFrom" onchange="filterReport()" class="w-full border border-gray-400 rounded-lg p-2 text-sm font-semibold outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">📅 إلى تاريخ:</label>
+                    <input type="date" id="reportDateTo" onchange="filterReport()" class="w-full border border-gray-400 rounded-lg p-2 text-sm font-semibold outline-none">
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-between items-center gap-2 border-t pt-3">
                 <div class="flex gap-2">
-                    <button onclick="loadReportData()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center gap-1">
-                        <span>🔄</span>
-                        <span>تحديث أونلاين</span>
+                    <button onclick="resetReportFilters()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1.5 rounded-lg text-xs font-bold transition">
+                        🧹 إعادة ضبط الفلاتر
                     </button>
-                    <button onclick="window.print()" class="bg-gray-900 hover:bg-black text-white px-5 py-2.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow">
+                    <button onclick="loadReportData()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1">
+                        <span>🔄</span>
+                        <span>تحديث</span>
+                    </button>
+                </div>
+
+                <div class="flex gap-2">
+                    <!-- زر تصدير التقرير لملف Excel CSV -->
+                    <button onclick="exportReportToExcel()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow">
+                        <span>📊</span>
+                        <span>تصدير Excel (CSV)</span>
+                    </button>
+
+                    <!-- زر مسح كافة السجلات المفلترة (ظاهر للأدمن فقط) -->
+                    <button id="adminClearReportBtn" onclick="clearFilteredReportData()" class="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-xs font-bold transition hidden flex items-center gap-1">
+                        <span>🗑️</span>
+                        <span>مسح المفلتر</span>
+                    </button>
+
+                    <button onclick="window.print()" class="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow">
                         <span>🖨️</span>
                         <span>طباعة التقرير</span>
                     </button>
@@ -86,7 +119,7 @@
             </div>
         </div>
 
-        <!-- كروت إحصائيات التقرير (بدون ألوان متكلفة للطباعة) -->
+        <!-- كروت إحصائيات التقرير -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 print-area">
             <div class="bg-white p-4 rounded-xl shadow-md border-2 border-gray-800 flex justify-between items-center">
                 <div>
@@ -118,16 +151,18 @@
                     <tr class="bg-gray-200 text-black text-sm font-black border-b-2 border-black">
                         <th class="py-3 px-2 border-l border-gray-400">م</th>
                         <th class="py-3 px-2 border-l border-gray-400">اسم الطبيب</th>
+                        <th class="py-3 px-2 border-l border-gray-400">السبب</th>
                         <th class="py-3 px-2 border-l border-gray-400">مُدخل البيانات (اليوزر)</th>
                         <th class="py-3 px-2 border-l border-gray-400">نوع الإجراء والعيادة</th>
                         <th class="py-3 px-2 border-l border-gray-400">الفرع</th>
                         <th class="py-3 px-2 border-l border-gray-400">مدة اعتذار الطبيب</th>
-                        <th class="py-3 px-2">وقت وتاريخ إدخال النظام</th>
+                        <th class="py-3 px-2 border-l border-gray-400">وقت وتاريخ إدخال النظام</th>
+                        <th id="actionHeaderReport" class="py-3 px-2 no-print hidden">إجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="reportTableBody" class="divide-y divide-gray-300 text-sm font-bold text-black">
                     <tr>
-                        <td colspan="7" class="p-8 text-gray-500 font-bold">جاري تحميل بيانات التقرير الرسمية...</td>
+                        <td colspan="9" class="p-8 text-gray-500 font-bold">جاري تحميل بيانات التقرير الرسمية...</td>
                     </tr>
                 </tbody>
             </table>
@@ -136,14 +171,20 @@
     </div>
 
     <script>
-        const currentUser = checkAuth();
+        // 🔒 السماح للأدمن والـ editor فقط بدخول صفحة التقارير
+        const currentUser = checkAuth(['admin', 'editor']);
         let rawReportData = [];
+        let currentlyFilteredData = [];
 
-        function initPage() {
+        function initReportsPage() {
             document.getElementById('currentUserDisplay').innerText = currentUser.name;
+            
+            // تفعيل أزرار الأدمن
             if (currentUser.role === 'admin') {
                 document.getElementById('navUsersBtn').classList.remove('hidden');
                 document.getElementById('navLogsBtn').classList.remove('hidden');
+                document.getElementById('adminClearReportBtn').classList.remove('hidden');
+                document.getElementById('actionHeaderReport').classList.remove('hidden');
             }
             
             // كتابة تفاصيل الهيدر المطبوع
@@ -151,6 +192,7 @@
             document.getElementById('printMetaInfo').innerText = `تاريخ استخراج التقرير: ${nowFormatted} | تم الاستخراج بواسطة: ${currentUser.name}`;
             
             loadReportData();
+            setupRealtimeReports();
         }
 
         // جلب البيانات أونلاين مباشرة من Supabase
@@ -159,7 +201,7 @@
             const client = getSupabase();
 
             if (!client) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-red-600 font-bold text-base">❌ لم يتم الاتصال بقاعدة البيانات</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-red-600 font-bold text-base">❌ لم يتم الاتصال بقاعدة البيانات</td></tr>`;
                 return;
             }
 
@@ -170,52 +212,142 @@
 
             if (error) {
                 console.error("❌ خطأ جلب التقرير:", error.message);
-                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-red-600 font-bold text-base">⚠️ خطأ السيرفر: ${error.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-red-600 font-bold text-base">⚠️ خطأ السيرفر: ${error.message}</td></tr>`;
                 return;
             }
 
             if (!data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-gray-500 font-bold text-base">لا توجد أي بيانات مسجلة في قاعدة البيانات حتى الآن</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-gray-500 font-bold text-base">لا توجد أي بيانات مسجلة في قاعدة البيانات حتى الآن</td></tr>`;
                 updateStats([]);
                 return;
             }
 
             rawReportData = data;
-            renderReportTable(rawReportData);
-            updateStats(rawReportData);
+            filterReport();
         }
 
-        // البحث السريع
+        function resetReportFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('reportDateFrom').value = '';
+            document.getElementById('reportDateTo').value = '';
+            filterReport();
+        }
+
+        // البحث والفلترة بالنص والنطاق الزمني
         function filterReport() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            
-            if (!query) {
-                renderReportTable(rawReportData);
-                updateStats(rawReportData);
-                return;
-            }
+            const dateFrom = document.getElementById('reportDateFrom').value;
+            const dateTo = document.getElementById('reportDateTo').value;
 
-            const filtered = rawReportData.filter(item => {
+            currentlyFilteredData = rawReportData.filter(item => {
                 const docName = (item.doctor_name || '').toLowerCase();
                 const userName = (item.created_by_name || '').toLowerCase();
                 const branch = (item.branch || '').toLowerCase();
                 const entryType = (item.entry_type || '').toLowerCase();
+                const reason = (item.reason || '').toLowerCase();
                 const notes = (item.notes || '').toLowerCase();
 
-                return docName.includes(query) || userName.includes(query) || branch.includes(query) || entryType.includes(query) || notes.includes(query);
+                const matchesText = !query || (docName.includes(query) || userName.includes(query) || branch.includes(query) || entryType.includes(query) || reason.includes(query) || notes.includes(query));
+
+                let matchesDate = true;
+                if (dateFrom && item.date < dateFrom) matchesDate = false;
+                if (dateTo && item.date > dateTo) matchesDate = false;
+
+                return matchesText && matchesDate;
             });
 
-            renderReportTable(filtered);
-            updateStats(filtered);
+            renderReportTable(currentlyFilteredData);
+            updateStats(currentlyFilteredData);
         }
 
-        // عرض سطور التقرير بدون شارات ملونة (أسود وأبيض ناصع ومقروء)
+        // تصدير البيانات المعروضة لملف أكسيل Excel CSV
+        function exportReportToExcel() {
+            if (currentlyFilteredData.length === 0) {
+                alert('لا توجد بيانات بجدول التقرير لتصديرها!');
+                return;
+            }
+
+            const headers = ["م", "اسم الطبيب", "السبب", "مُدخل البيانات", "نوع الإجراء والعيادة", "الفرع", "التاريخ/الفترة", "وقت الإدخال بالنظام"];
+            const rows = currentlyFilteredData.map((item, idx) => {
+                let durationText = (item.entry_type === 'اعتذار فترة' && item.end_date) ? `من ${item.date} إلى ${item.end_date}` : `${item.date} - من ${item.time_from || '-'} إلى ${item.time_to || '-'}`;
+                let createdTime = item.created_at ? new Date(item.created_at).toLocaleString('ar-EG') : '-';
+                let clinicText = item.clinic || '-';
+                if (item.clinic === 'فحص' && item.exam_type && item.exam_type !== '-') clinicText += ` (${item.exam_type})`;
+
+                return [
+                    idx + 1,
+                    item.doctor_name || '-',
+                    item.reason || 'غير محدد',
+                    item.created_by_name || 'مستخدم',
+                    `${item.entry_type || 'اعتذار'} - ${clinicText}`,
+                    item.branch || '-',
+                    durationText,
+                    createdTime
+                ];
+            });
+
+            const fileName = `Doctor_Absences_Report_${new Date().toISOString().split('T')[0]}.csv`;
+            exportToCSV(fileName, headers, rows);
+            showToast('📊 تم تصدير التقرير لملف أكسيل بنجاح!', 'success');
+        }
+
+        // ❌ دالة حذف صف واحد من التقرير والداتا بيز (للأدمن فقط)
+        async function deleteReportItem(id) {
+            if (currentUser.role !== 'admin') return;
+            const target = rawReportData.find(a => a.id === id);
+
+            if (confirm(`تنبيه للمدير: هل أنت متأكد من حذف اعتذار/طلب الطبيب (${target ? target.doctor_name : ''}) نهائياً من التقرير والداتا بيز؟`)) {
+                const client = getSupabase();
+                if (client) {
+                    const { error } = await client.from('doctor_absences').delete().eq('id', id);
+                    if (error) {
+                        alert("⚠️ فشل الحذف من السيرفر: " + error.message);
+                        return;
+                    }
+                }
+
+                await createLog('حذف من التقرير', `قام المدير (${currentUser.name}) بحذف طلب/اعتذار الطبيب (${target ? target.doctor_name : ''}) من صفحة التقارير`);
+                showToast("✅ تم حذف السجل بنجاح من التقرير", "success");
+                loadReportData();
+            }
+        }
+
+        // 🗑️ دالة مسح كافة البيانات المفلترة بالتقرير (للأدمن فقط)
+        async function clearFilteredReportData() {
+            if (currentUser.role !== 'admin') return;
+            if (currentlyFilteredData.length === 0) {
+                alert('لا توجد بيانات معروضة بالتقرير لمسحها!');
+                return;
+            }
+
+            if (confirm(`تنبيه للمدير: هل أنت متأكد من مسح كافة السجلات المعروضة بالتقرير وعددها (${currentlyFilteredData.length}) نهائياً من قاعدة البيانات؟`)) {
+                const idsToDelete = currentlyFilteredData.map(item => item.id);
+                const client = getSupabase();
+
+                if (client) {
+                    const { error } = await client.from('doctor_absences').delete().in('id', idsToDelete);
+                    if (error) {
+                        alert("⚠️ فشل المسح من السيرفر: " + error.message);
+                        return;
+                    }
+                }
+
+                await createLog('مسح التقرير', `قام المدير (${currentUser.name}) بمسح (${currentlyFilteredData.length}) سجلات من صفحة التقارير`);
+                showToast("✅ تم مسح بيانات التقرير بنجاح", "success");
+                loadReportData();
+            }
+        }
+
+        // عرض سطور التقرير بدون ألوان ومزودة بزار الحذف للأدمن
         function renderReportTable(data) {
             const tbody = document.getElementById('reportTableBody');
             tbody.innerHTML = '';
 
+            const isPageAdmin = (currentUser.role === 'admin');
+
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-gray-500 font-bold text-base">لا توجد نتائج تطابق البحث</td></tr>`;
+                const colSpan = isPageAdmin ? 9 : 8;
+                tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-gray-500 font-bold text-base">لا توجد نتائج تطابق البحث أو الفلترة الحالية</td></tr>`;
                 return;
             }
 
@@ -223,7 +355,6 @@
                 const tr = document.createElement('tr');
                 tr.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
 
-                // صياغة مدة الاعتذار بدون ألوان
                 let durationText = '';
                 if (item.entry_type === 'اعتذار فترة' && item.end_date) {
                     durationText = `من ${item.date} إلى ${item.end_date}`;
@@ -231,7 +362,6 @@
                     durationText = `${item.date} (${item.day || ''}) - من ${item.time_from || '-'} إلى ${item.time_to || '-'}`;
                 }
 
-                // وقت وتاريخ الإدخال بالنظام
                 const createdTimeFormatted = item.created_at ? new Date(item.created_at).toLocaleString('ar-EG', {
                     year: 'numeric', month: '2-digit', day: '2-digit',
                     hour: '2-digit', minute: '2-digit', second: '2-digit'
@@ -242,14 +372,27 @@
                     clinicText += ` (${item.exam_type})`;
                 }
 
+                let actionColHTML = '';
+                if (isPageAdmin) {
+                    actionColHTML = `
+                        <td class="py-3 px-2 no-print">
+                            <button onclick="deleteReportItem(${item.id})" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg text-xs font-bold transition border border-red-300">
+                                ❌ حذف
+                            </button>
+                        </td>
+                    `;
+                }
+
                 tr.innerHTML = `
                     <td class="py-3 px-2 border-l border-gray-300 font-black text-black">${index + 1}</td>
                     <td class="py-3 px-2 border-l border-gray-300 font-extrabold text-black">${item.doctor_name || '-'}</td>
+                    <td class="py-3 px-2 border-l border-gray-300 font-bold text-xs text-gray-700">${item.reason || 'غير محدد'}</td>
                     <td class="py-3 px-2 border-l border-gray-300 font-bold text-black">${item.created_by_name || 'مستخدم'}</td>
                     <td class="py-3 px-2 border-l border-gray-300 font-bold text-black">${item.entry_type || 'اعتذار'} - ${clinicText}</td>
                     <td class="py-3 px-2 border-l border-gray-300 font-bold text-black">${item.branch || '-'}</td>
                     <td class="py-3 px-2 border-l border-gray-300 font-semibold text-xs text-black">${durationText}</td>
-                    <td class="py-3 px-2 text-black font-mono text-xs dir-ltr font-bold">${createdTimeFormatted}</td>
+                    <td class="py-3 px-2 border-l border-gray-300 text-black font-mono text-xs dir-ltr font-bold">${createdTimeFormatted}</td>
+                    ${actionColHTML}
                 `;
                 tbody.appendChild(tr);
             });
@@ -279,7 +422,17 @@
             document.getElementById('statTopBranch').innerText = topBranch ? `${topBranch} (${branchCounts[topBranch]} مرة)` : '-';
         }
 
-        initPage();
+        function setupRealtimeReports() {
+            const client = getSupabase();
+            if (!client) return;
+            client.channel('public:reports_changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'doctor_absences' }, () => {
+                    loadReportData();
+                })
+                .subscribe();
+        }
+
+        initReportsPage();
     </script>
 </body>
 </html>

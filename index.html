@@ -25,7 +25,7 @@
         <div class="bg-white p-4 md:p-5 rounded-xl shadow-md border-t-4 border-red-600 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl md:text-3xl font-black text-red-600">جدول إجراءات واعتذارات الأطباء</h1>
-                <p class="text-gray-600 text-xs font-bold mt-1">نظام الإدارة اللحظي وتوثيق الطلبات (Realtime Supabase)</p>
+                <p class="text-gray-600 text-xs font-bold mt-1">Made By Abdallah - IT Department</p>
             </div>
 
             <div class="flex items-center gap-3 no-print">
@@ -58,9 +58,34 @@
         <!-- أزرار التنقل بين الصفحات -->
         <div class="flex gap-2 border-b border-gray-300 pb-2 no-print overflow-x-auto">
             <a href="index.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-red-600 text-white shadow">📋 جدول الاعتذارات والطلبات</a>
-            <a href="reports.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow">📊 التقارير والإحصائيات</a>
+            <a id="navReportsBtn" href="reports.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">📊 التقارير والإحصائيات</a>
             <a id="navUsersBtn" href="users.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">👥 إدارة المستخدمين</a>
             <a id="navLogsBtn" href="logs.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">📜 سجل العمليات (Logs)</a>
+        </div>
+
+        <!-- 📊 كروت الإحصائيات السريعة اليومية -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 no-print">
+            <div class="bg-white p-3.5 rounded-xl shadow-sm border-r-4 border-red-600 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-bold text-gray-500">اعتذارات / طلبات اليوم</p>
+                    <h4 id="statTodayAbsences" class="text-xl font-black text-gray-900 mt-0.5">0</h4>
+                </div>
+                <span class="text-2xl">📅</span>
+            </div>
+            <div class="bg-white p-3.5 rounded-xl shadow-sm border-r-4 border-blue-600 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-bold text-gray-500">بانتظار التنفيذ (الكول سينتر)</p>
+                    <h4 id="statPendingCC" class="text-xl font-black text-gray-900 mt-0.5">0</h4>
+                </div>
+                <span class="text-2xl">👁️</span>
+            </div>
+            <div class="bg-white p-3.5 rounded-xl shadow-sm border-r-4 border-emerald-600 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-bold text-gray-500">تم تنفيذها اليوم</p>
+                    <h4 id="statExecutedToday" class="text-xl font-black text-gray-900 mt-0.5">0</h4>
+                </div>
+                <span class="text-2xl">✅</span>
+            </div>
         </div>
 
         <!-- استمارة إضافة / تعديل إجراء أو اعتذار -->
@@ -80,9 +105,25 @@
                     </select>
                 </div>
 
+                <!-- اسم الطبيب مع الإكمال التلقائي الذكي -->
                 <div>
                     <label class="block text-xs font-bold text-gray-700 mb-1">اسم الطبيب *</label>
-                    <input type="text" id="doctorName" required placeholder="د. اسم الطبيب" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-red-500 outline-none">
+                    <input type="text" id="doctorName" list="doctorsList" required placeholder="د. اسم الطبيب" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-red-500 outline-none">
+                    <datalist id="doctorsList"></datalist>
+                </div>
+
+                <!-- سبب الاعتذار / الإجراء -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">سبب الاعتذار / الإجراء</label>
+                    <select id="reason" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
+                        <option value="غير محدد" selected>-- غير محدد --</option>
+                        <option value="إجازة سنوية">إجازة</option>
+                        <option value="ظروف طارئة">ظروف طارئة</option>
+                        <option value="عذر مرضي">عذر مرضي</option>
+                        <option value="سفر / مؤتمر">سفر / مؤتمر</option>
+                        <option value="إذن ساعتين">إذن ساعتين</option>
+                        <option value="أخرى">أخرى</option>
+                    </select>
                 </div>
 
                 <!-- عياده - فحص - عمليات -->
@@ -113,7 +154,6 @@
                         <option value="All">All (الكل)</option>
                     </select>
                     <p id="examTypeHint" class="text-[10px] text-gray-400 font-bold mt-1">يتطلب اختيار 'فحص' لتفعيل القائمة</p>
-                    
                     <div id="selectedExamsTags" class="flex flex-wrap gap-1.5 mt-2 min-h-[26px]"></div>
                 </div>
 
@@ -227,6 +267,7 @@
                         <th class="py-3.5 px-3 border-l border-slate-700">م</th>
                         <th class="py-3.5 px-3 border-l border-slate-700">نوع الإجراء</th>
                         <th class="py-3.5 px-3 border-l border-slate-700 text-red-300">اسم الطبيب</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700">السبب</th>
                         <th class="py-3.5 px-3 border-l border-slate-700">عياده - فحص - عمليات</th>
                         <th class="py-3.5 px-3 border-l border-slate-700">الفرع</th>
                         <th class="py-3.5 px-3 border-l border-slate-700">التاريخ / الفترة</th>
@@ -251,14 +292,6 @@
         let selectedExamsList = [];
 
         const daysArabic = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-        const allExamOptionsList = ["OCT 1", "OCT 2", "Optos", "Ultrasound", "BIO", "PentaCam", "Specular", "VEP/ERG", "Hess Screen Test"];
-
-        const entryTypeBadges = {
-            'اعتذار': '<span class="bg-red-100 text-red-800 border border-red-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🔴 اعتذار</span>',
-            'اعتذار فترة': '<span class="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟣 اعتذار فترة</span>',
-            'إضافة عيادة': '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟢 إضافة عيادة</span>',
-            'تعديل': '<span class="bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟠 تعديل</span>'
-        };
 
         const entryTypeCellStyles = {
             'اعتذار': 'bg-red-500 text-white font-black border-l border-red-600',
@@ -358,6 +391,32 @@
             }
         }
 
+        // تحديث مقترحات أسماء الأطباء
+        function updateDoctorsDatalist() {
+            const listEl = document.getElementById('doctorsList');
+            if (!listEl) return;
+            const uniqueDocs = [...new Set(absences.map(a => a.doctorName).filter(Boolean))];
+            listEl.innerHTML = uniqueDocs.map(d => `<option value="${d}">`).join('');
+        }
+
+        // تحديث الكروت الإحصائية اليومية
+        function updateSummaryStats() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            
+            // 1. إجمالي طلبات اليوم
+            const todayCount = absences.filter(a => a.date === todayStr || (a.endDate && a.date <= todayStr && a.endDate >= todayStr)).length;
+            
+            // 2. بانتظار التنفيذ (أي طلب لم يُنفذ بعد)
+            const pendingCC = absences.filter(a => !a.ccExecuted).length;
+            
+            // 3. تم تنفيذها اليوم
+            const executedToday = absences.filter(a => a.ccExecuted).length;
+
+            if (document.getElementById('statTodayAbsences')) document.getElementById('statTodayAbsences').innerText = todayCount;
+            if (document.getElementById('statPendingCC')) document.getElementById('statPendingCC').innerText = pendingCC;
+            if (document.getElementById('statExecutedToday')) document.getElementById('statExecutedToday').innerText = executedToday;
+        }
+
         async function initPage() {
             const client = getSupabase();
             if (client && currentUser.username) {
@@ -373,10 +432,12 @@
             
             if (currentUser.role === 'admin') {
                 badge.innerText = "مدير النظام"; badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-red-100 text-red-800";
+                document.getElementById('navReportsBtn').classList.remove('hidden');
                 document.getElementById('navUsersBtn').classList.remove('hidden');
                 document.getElementById('navLogsBtn').classList.remove('hidden');
             } else if (currentUser.role === 'editor') {
                 badge.innerText = "مدخل بيانات"; badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-blue-100 text-blue-800";
+                document.getElementById('navReportsBtn').classList.remove('hidden');
                 document.getElementById('clearAllBtn').classList.add('hidden');
             } else if (currentUser.role === 'callcenter') {
                 badge.innerText = "كول سينتر"; badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-purple-100 text-purple-800";
@@ -405,6 +466,7 @@
                     id: item.id,
                     entryType: item.entry_type || 'اعتذار',
                     doctorName: item.doctor_name, 
+                    reason: item.reason || 'غير محدد',
                     clinic: item.clinic, 
                     examType: item.exam_type || '-',
                     branch: item.branch,
@@ -423,6 +485,8 @@
                     ccExecutedTimestamp: item.cc_executed_timestamp ? new Date(item.cc_executed_timestamp).getTime() : null,
                     createdTimestamp: item.created_at ? new Date(item.created_at).getTime() : Date.now()
                 }));
+                updateDoctorsDatalist();
+                updateSummaryStats();
                 renderTable();
             }
         }
@@ -433,7 +497,34 @@
 
             const editId = document.getElementById('editingAbsenceId').value;
             const entryTypeVal = document.getElementById('entryType').value;
+            const doctorNameVal = document.getElementById('doctorName').value.trim();
+            const dateVal = document.getElementById('date').value;
+            const endDateVal = document.getElementById('endDate').value;
             const clinicVal = document.getElementById('clinic').value;
+            const reasonVal = document.getElementById('reason').value;
+
+            // ⚠️ فحص التعارض الذكي للأطباء
+            if (!editId) {
+                const hasConflict = absences.some(item => {
+                    if (item.doctorName.trim().toLowerCase() === doctorNameVal.toLowerCase()) {
+                        if (entryTypeVal === 'اعتذار فترة' || item.entryType === 'اعتذار فترة') {
+                            const newStart = new Date(dateVal);
+                            const newEnd = endDateVal ? new Date(endDateVal) : new Date(dateVal);
+                            const itemStart = new Date(item.date);
+                            const itemEnd = item.endDate ? new Date(item.endDate) : new Date(item.date);
+                            return (newStart <= itemEnd && newEnd >= itemStart);
+                        }
+                        return item.date === dateVal;
+                    }
+                    return false;
+                });
+
+                if (hasConflict) {
+                    if (!confirm(`⚠️ تنبيه تعارض: يوجد إجراء/اعتذار سابق مسجل لـ (${doctorNameVal}) في نفس هذا التاريخ أو الفترة!\n\nهل تريد الاستمرار بالحفظ رغم التعارض؟`)) {
+                        return;
+                    }
+                }
+            }
             
             let examTypeVal = '-';
             if (clinicVal === 'فحص') {
@@ -449,12 +540,13 @@
 
             const absencePayload = {
                 entry_type: entryTypeVal,
-                doctor_name: document.getElementById('doctorName').value,
+                doctor_name: doctorNameVal,
+                reason: reasonVal,
                 clinic: clinicVal,
                 exam_type: examTypeVal,
                 branch: document.getElementById('branch').value,
-                date: document.getElementById('date').value,
-                end_date: isPeriod ? document.getElementById('endDate').value : null,
+                date: dateVal,
+                end_date: isPeriod ? endDateVal : null,
                 day: document.getElementById('day').value,
                 time_from: isPeriod ? 'طوال الفترة' : document.getElementById('timeFrom').value,
                 time_to: isPeriod ? 'طوال الفترة' : document.getElementById('timeTo').value,
@@ -473,9 +565,7 @@
                         alert("⚠️ فشل الحفظ أونلاين: " + error.message);
                         return;
                     }
-                    const detailText = isPeriod 
-                        ? `من ${absencePayload.date} إلى ${absencePayload.end_date}` 
-                        : `بتاريخ ${absencePayload.date}`;
+                    const detailText = isPeriod ? `من ${absencePayload.date} إلى ${absencePayload.end_date}` : `بتاريخ ${absencePayload.date}`;
                     await createLog('إضافة طلب', `تم تسجيل (${absencePayload.entry_type}) جديد للطبيب (${absencePayload.doctor_name}) - ${absencePayload.branch} (${detailText})`);
                     
                     const notifText = `📢 تم تسجيل (${absencePayload.entry_type}) جديد للطبيب (${absencePayload.doctor_name}) - ${absencePayload.branch} بواسطة (${currentUser.name})`;
@@ -549,7 +639,7 @@
             });
 
             if (currentData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="12" class="p-8 text-gray-500 font-bold text-lg">لا توجد حركات أو اعتذارات مسجلة حتى الآن</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="13" class="p-8 text-gray-500 font-bold text-lg">لا توجد حركات أو اعتذارات مسجلة حتى الآن</td></tr>`;
                 return;
             }
 
@@ -602,26 +692,22 @@
                     ? `<span class="text-purple-900 font-black">من ${item.date}<br>إلى ${item.endDate}</span>`
                     : item.date;
 
-                // 🟨 تنسيق عرض نوع الفحص بالاسم فقط دون كلمة فحص
                 let clinicDisplay = clinicBadges[item.clinic] || item.clinic;
                 if (item.clinic === 'فحص' && item.examType && item.examType !== '-') {
                     clinicDisplay = `<span class="bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟨 ${item.examType}</span>`;
                 }
 
                 const isExecutedDisabled = (!isCC || item.ccExecuted || !item.ccSeen);
-                
-                // 🔴 الخلية الخارجية تملأ البوكس بالكامل باللون الخاص بـ نوع الإجراء
                 const cellBgClass = entryTypeCellStyles[item.entryType] || 'border-l border-gray-200 font-bold text-slate-800';
 
                 tr.innerHTML = `
                     <td class="py-3 px-2 border-l border-gray-200 font-black text-slate-700">${index + 1}</td>
-                    
-                    <!-- 🔴 الخلية بالكامل تأخذ اللون بدون فواصل بيضاء -->
                     <td class="py-3 px-3 text-center text-sm ${cellBgClass}">
                         ${item.entryType}
                     </td>
 
                     <td class="py-3 px-2 border-l border-gray-200 font-black text-red-600 bg-red-50/30">${item.doctorName}</td>
+                    <td class="py-3 px-2 border-l border-gray-200 font-bold text-xs text-gray-700">${item.reason}</td>
                     <td class="py-3 px-2 border-l border-gray-200 font-bold">${clinicDisplay}</td>
                     <td class="py-3 px-2 border-l border-gray-200 font-bold">${branchBadges[item.branch] || item.branch}</td>
                     <td class="py-3 px-2 border-l border-gray-200 font-bold">${dateDisplay}</td>
@@ -630,24 +716,38 @@
                     <td class="py-3 px-2 border-l border-gray-200 font-bold text-slate-700">${item.timeTo}</td>
                     <td class="py-3 px-2 border-l border-gray-200 font-black text-red-600 bg-red-50/30">${item.substituteDoctor}</td>
                     
-                    <td class="py-3 px-2 border-l border-gray-200 font-semibold text-sm">
-                        <div class="text-xs font-bold text-slate-800 mb-1.5">${item.notes}</div>
-                        <div class="flex flex-col sm:flex-row items-center justify-center gap-2.5 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
-                            <!-- تم الرؤية -->
-                            <label class="inline-flex items-center gap-1 cursor-pointer select-none text-xs font-bold text-blue-900">
-                                <input type="checkbox" onchange="toggleCallCenterSeen(${item.id})" ${item.ccSeen ? 'checked disabled' : (!isCC ? 'disabled' : '')} class="w-4 h-4 accent-blue-600">
-                                <span>تم الرؤية</span>
-                            </label>
-
-                            <!-- تم التنفيذ -->
-                            <label class="inline-flex items-center gap-1 select-none text-xs font-bold ${!item.ccSeen ? 'text-gray-400 opacity-60' : 'text-emerald-900 cursor-pointer'}">
-                                <input type="checkbox" onchange="toggleCallCenterExecuted(${item.id})" ${item.ccExecuted ? 'checked disabled' : (isExecutedDisabled ? 'disabled' : '')} class="w-4 h-4 accent-emerald-600 ${!item.ccSeen ? 'cursor-not-allowed' : 'cursor-pointer'}">
-                                <span>تم التنفيذ</span>
-                            </label>
+                    <td class="py-2.5 px-3 border-l border-gray-200 text-right min-w-[220px]">
+                        <!-- الملاحظات -->
+                        <div class="text-xs font-bold text-gray-700 mb-2 leading-snug">
+                            ${(item.notes && item.notes !== '-') ? `📝 <span class="text-gray-900 font-extrabold">${item.notes}</span>` : '<span class="text-gray-400 font-normal italic">لا توجد ملاحظات</span>'}
                         </div>
-                        ${seenBadgeHTML}
-                        ${executedBadgeHTML}
-                        ${timerBadge}
+
+                        <!-- شريط الإجراءات والواتساب الموحد -->
+                        <div class="flex flex-col gap-1.5 no-print">
+                            <div class="flex items-center justify-between gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200 shadow-inner">
+                                <!-- تم الرؤية -->
+                                <label class="inline-flex items-center gap-1 cursor-pointer select-none text-[11px] font-black text-blue-900 bg-white px-2 py-1 rounded-lg border border-blue-200 shadow-sm hover:bg-blue-50 transition">
+                                    <input type="checkbox" onchange="toggleCallCenterSeen(${item.id})" ${item.ccSeen ? 'checked disabled' : (!isCC ? 'disabled' : '')} class="w-3.5 h-3.5 accent-blue-600 rounded">
+                                    <span>تم الرؤية</span>
+                                </label>
+
+                                <!-- تم التنفيذ -->
+                                <label class="inline-flex items-center gap-1 select-none text-[11px] font-black ${!item.ccSeen ? 'text-gray-400 bg-gray-50 opacity-60 border border-gray-200' : 'text-emerald-900 bg-white border border-emerald-200 shadow-sm hover:bg-emerald-50 cursor-pointer'} px-2 py-1 rounded-lg transition">
+                                    <input type="checkbox" onchange="toggleCallCenterExecuted(${item.id})" ${item.ccExecuted ? 'checked disabled' : (isExecutedDisabled ? 'disabled' : '')} class="w-3.5 h-3.5 accent-emerald-600 rounded ${!item.ccSeen ? 'cursor-not-allowed' : 'cursor-pointer'}">
+                                    <span>تم التنفيذ</span>
+                                </label>
+
+                                <!-- زر الواتساب -->
+                                <button onclick="copyWhatsAppText('${item.doctorName}', '${item.entryType}', '${item.clinic}', '${item.branch}', '${item.date}', '${item.endDate || ''}', '${item.day}', '${item.timeFrom}', '${item.timeTo}', '${item.notes}', '${item.reason}')" class="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-black px-2.5 py-1 rounded-lg shadow transition" title="نسخ رسالة منسقة للواتساب">
+                                    <span>📱</span>
+                                    <span>واتساب</span>
+                                </button>
+                            </div>
+                            
+                            ${seenBadgeHTML}
+                            ${executedBadgeHTML}
+                            ${timerBadge}
+                        </div>
                     </td>
 
                     ${actionButtons}
@@ -667,6 +767,7 @@
             handleEntryTypeChange();
 
             document.getElementById('doctorName').value = item.doctorName;
+            document.getElementById('reason').value = item.reason || 'غير محدد';
             document.getElementById('clinic').value = item.clinic;
             handleClinicChange();
 
@@ -694,6 +795,7 @@
             document.getElementById('absenceForm').reset();
             document.getElementById('editingAbsenceId').value = '';
             document.getElementById('entryType').value = 'اعتذار';
+            document.getElementById('reason').value = 'غير محدد';
             selectedExamsList = [];
             renderSelectedExamTags();
             handleEntryTypeChange();
