@@ -34,10 +34,17 @@ function getSupabase() {
   };
   
   const branchBadges = {
-      'فرع الثورة': '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟩 فرع الثورة</span>',
-      'فرع الحجاز': '<span class="bg-indigo-100 text-indigo-800 border border-indigo-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟦 فرع الحجاز</span>',
-      'فرع الغردقه': '<span class="bg-rose-100 text-rose-800 border border-rose-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟥 فرع الغردقه</span>'
+      'فرع الثورة': '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟩 فرع الثورة</span>',
+      'فرع الحجاز': '<span class="bg-indigo-100 text-indigo-800 border border-indigo-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟦 فرع الحجاز</span>',
+      'فرع الغردقه': '<span class="bg-rose-100 text-rose-800 border border-rose-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟥 فرع الغردقه</span>'
   };
+
+  // دالة عرض شارات الفروع المتعددة
+  function renderBranchBadges(branchStr) {
+      if (!branchStr) return '-';
+      const branches = branchStr.split(/[،,]/).map(b => b.trim()).filter(Boolean);
+      return branches.map(b => branchBadges[b] || `<span class="bg-gray-100 text-gray-800 border border-gray-300 px-2 py-0.5 rounded-full font-black text-xs shadow-sm inline-block">${b}</span>`).join(' ');
+  }
   
   const rolesBadges = {
       admin: '<span class="text-red-700 bg-red-100 border border-red-200 px-2.5 py-1 rounded-full text-xs">🔴 مدير النظام</span>',
@@ -276,15 +283,17 @@ function getSupabase() {
       });
   }
 
-  // 8. دالة نسخ نص منسق للواتساب
-  function copyWhatsAppText(docName, entryType, clinic, branch, date, endDate, day, timeFrom, timeTo, notes, reason) {
+  // 8. دالة نسخ نص منسق للواتساب (تشتمل على الدكتور البديل)
+  function copyWhatsAppText(docName, entryType, clinic, branch, date, endDate, day, timeFrom, timeTo, substituteDoctor, notes) {
       let text = `📢 *تنبيه بشأن جدول الأطباء*\n\n`;
       text += `🔹 *نوع الإجراء:* ${entryType}\n`;
       text += `👨‍⚕️ *الطبيب:* ${docName}\n`;
       text += `🏥 *الفرع والنوع:* ${branch} (${clinic})\n`;
       text += (entryType === 'اعتذار فترة' && endDate) ? `📅 *الفترة:* من ${date} إلى ${endDate}\n` : `📅 *التاريخ:* ${date} (${day})\n`;
       if (timeFrom && timeFrom !== 'طوال الفترة') text += `⏰ *الوقت:* من ${timeFrom} إلى ${timeTo}\n`;
-      if (reason && reason !== '-') text += `📌 *السبب:* ${reason}\n`;
+      if (substituteDoctor && substituteDoctor !== '-' && substituteDoctor.trim() !== '') {
+          text += `🔄 *الطبيب البديل:* ${substituteDoctor}\n`;
+      }
       if (notes && notes !== '-') text += `📝 *ملاحظات:* ${notes}\n`;
 
       navigator.clipboard.writeText(text).then(() => {
@@ -296,7 +305,7 @@ function getSupabase() {
 
   // 9. دالة تصدير البيانات إلى ملف أكسيل CSV مع إتاحة اللغة العربية
   function exportToCSV(filename, headers, rows) {
-      let csvContent = "\uFEFF"; // UTF-8 BOM للأحرف العربية
+      let csvContent = "\uFEFF";
       csvContent += headers.join(",") + "\n";
 
       rows.forEach(row => {

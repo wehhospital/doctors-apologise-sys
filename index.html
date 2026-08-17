@@ -25,7 +25,7 @@
         <div class="bg-white p-4 md:p-5 rounded-xl shadow-md border-t-4 border-red-600 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl md:text-3xl font-black text-red-600">جدول إجراءات واعتذارات الأطباء</h1>
-                <p class="text-gray-600 text-xs font-bold mt-1">Made By Abdallah - IT Department</p>
+                <p class="text-gray-600 text-xs font-bold mt-1">نظام الإدارة اللحظي وتوثيق الطلبات (Realtime Supabase)</p>
             </div>
 
             <div class="flex items-center gap-3 no-print">
@@ -63,7 +63,7 @@
             <a id="navLogsBtn" href="logs.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">📜 سجل العمليات (Logs)</a>
         </div>
 
-        <!-- 📊 كروت الإحصائيات السريعة اليومية -->
+        <!-- 📊 كروت الإحصائيات السريعة -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 no-print">
             <div class="bg-white p-3.5 rounded-xl shadow-sm border-r-4 border-red-600 flex justify-between items-center">
                 <div>
@@ -81,7 +81,7 @@
             </div>
             <div class="bg-white p-3.5 rounded-xl shadow-sm border-r-4 border-emerald-600 flex justify-between items-center">
                 <div>
-                    <p class="text-xs font-bold text-gray-500">تم تنفيذها اليوم</p>
+                    <p class="text-xs font-bold text-gray-500">تم تنفيذها</p>
                     <h4 id="statExecutedToday" class="text-xl font-black text-gray-900 mt-0.5">0</h4>
                 </div>
                 <span class="text-2xl">✅</span>
@@ -110,20 +110,6 @@
                     <label class="block text-xs font-bold text-gray-700 mb-1">اسم الطبيب *</label>
                     <input type="text" id="doctorName" list="doctorsList" required placeholder="د. اسم الطبيب" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-red-500 outline-none">
                     <datalist id="doctorsList"></datalist>
-                </div>
-
-                <!-- سبب الاعتذار / الإجراء -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">سبب الاعتذار / الإجراء</label>
-                    <select id="reason" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
-                        <option value="غير محدد" selected>-- غير محدد --</option>
-                        <option value="إجازة سنوية">إجازة</option>
-                        <option value="ظروف طارئة">ظروف طارئة</option>
-                        <option value="عذر مرضي">عذر مرضي</option>
-                        <option value="سفر / مؤتمر">سفر / مؤتمر</option>
-                        <option value="إذن ساعتين">إذن ساعتين</option>
-                        <option value="أخرى">أخرى</option>
-                    </select>
                 </div>
 
                 <!-- عياده - فحص - عمليات -->
@@ -157,14 +143,37 @@
                     <div id="selectedExamsTags" class="flex flex-wrap gap-1.5 mt-2 min-h-[26px]"></div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">الفرع *</label>
-                    <select id="branch" required class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
-                        <option value="" disabled selected>اختر الفرع</option>
-                        <option value="فرع الثورة" style="background-color: #d1fae5; color: #047857;">🟩 فرع الثورة</option>
-                        <option value="فرع الحجاز" style="background-color: #e0e7ff; color: #4338ca;">🟦 فرع الحجاز</option>
-                        <option value="فرع الغردقه" style="background-color: #ffe4e6; color: #be123c;">🟥 فرع الغردقه</option>
-                    </select>
+                <!-- الفرع / الفروع -->
+                <div id="branchSection" class="md:col-span-2">
+                    <!-- فرع واحد (لكافة الإجراءات ما عدا اعتذار فترة) -->
+                    <div id="singleBranchContainer">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">الفرع *</label>
+                        <select id="singleBranch" required class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold bg-white">
+                            <option value="" disabled selected>اختر الفرع</option>
+                            <option value="فرع الثورة" style="background-color: #d1fae5; color: #047857;">🟩 فرع الثورة</option>
+                            <option value="فرع الحجاز" style="background-color: #e0e7ff; color: #4338ca;">🟦 فرع الحجاز</option>
+                            <option value="فرع الغردقه" style="background-color: #ffe4e6; color: #be123c;">🟥 فرع الغردقه</option>
+                        </select>
+                    </div>
+
+                    <!-- فروع متعددة (خاص باعتذار فترة فقط) -->
+                    <div id="multiBranchContainer" class="hidden">
+                        <label class="block text-xs font-bold text-purple-900 mb-1">فروع الفترة (تحديد فرع أو أكثر) *</label>
+                        <div class="flex flex-wrap items-center gap-2 p-2 bg-purple-50 border-2 border-purple-300 rounded-lg min-h-[42px]">
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-emerald-300 text-xs font-extrabold text-emerald-800 hover:bg-emerald-50 shadow-sm select-none">
+                                <input type="checkbox" name="branchOption" value="فرع الثورة" class="w-4 h-4 accent-emerald-600 cursor-pointer">
+                                <span>🟩 فرع الثورة</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-indigo-300 text-xs font-extrabold text-indigo-800 hover:bg-indigo-50 shadow-sm select-none">
+                                <input type="checkbox" name="branchOption" value="فرع الحجاز" class="w-4 h-4 accent-indigo-600 cursor-pointer">
+                                <span>🟦 فرع الحجاز</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-rose-300 text-xs font-extrabold text-rose-800 hover:bg-rose-50 shadow-sm select-none">
+                                <input type="checkbox" name="branchOption" value="فرع الغردقه" class="w-4 h-4 accent-rose-600 cursor-pointer">
+                                <span>🟥 فرع الغردقه</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- من تاريخ -->
@@ -239,7 +248,7 @@
                     <input type="text" id="substituteDoctor" placeholder="اختياري" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
                 </div>
 
-                <div class="md:col-span-3 lg:col-span-3">
+                <div class="md:col-span-2 lg:col-span-2">
                     <label class="block text-xs font-bold text-gray-700 mb-1">ملاحظات</label>
                     <input type="text" id="notes" placeholder="أي تفاصيل أخرى..." class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
                 </div>
@@ -267,9 +276,8 @@
                         <th class="py-3.5 px-3 border-l border-slate-700">م</th>
                         <th class="py-3.5 px-3 border-l border-slate-700">نوع الإجراء</th>
                         <th class="py-3.5 px-3 border-l border-slate-700 text-red-300">اسم الطبيب</th>
-                        <th class="py-3.5 px-3 border-l border-slate-700">السبب</th>
                         <th class="py-3.5 px-3 border-l border-slate-700">عياده - فحص - عمليات</th>
-                        <th class="py-3.5 px-3 border-l border-slate-700">الفرع</th>
+                        <th class="py-3.5 px-3 border-l border-slate-700">الفرع / الفروع</th>
                         <th class="py-3.5 px-3 border-l border-slate-700">التاريخ / الفترة</th>
                         <th class="py-3.5 px-3 border-l border-slate-700">اليوم</th>
                         <th class="py-3.5 px-3 border-l border-slate-700">من</th>
@@ -365,12 +373,16 @@
             return selectedExamsList.length > 0 ? selectedExamsList.join(', ') : '-';
         }
 
+        // التبديل الديناميكي بين القائمة المنسدلة للإجراءات العادية والمربعات المتعددة باعتذار فترة
         function handleEntryTypeChange() {
             const type = document.getElementById('entryType').value;
             const timeFromDiv = document.getElementById('timeFromContainer');
             const timeToDiv = document.getElementById('timeToContainer');
             const endDateDiv = document.getElementById('endDateContainer');
             const dateLabel = document.getElementById('dateLabel');
+
+            const singleBranchDiv = document.getElementById('singleBranchContainer');
+            const multiBranchDiv = document.getElementById('multiBranchContainer');
 
             if (type === 'اعتذار فترة') {
                 timeFromDiv.classList.add('hidden');
@@ -380,6 +392,11 @@
                 document.getElementById('timeFrom').required = false;
                 document.getElementById('timeTo').required = false;
                 document.getElementById('endDate').required = true;
+
+                // إظهار التحديد المتعدد للفروع وإخفاء القائمة المنسدلة
+                singleBranchDiv.classList.add('hidden');
+                multiBranchDiv.classList.remove('hidden');
+                document.getElementById('singleBranch').required = false;
             } else {
                 timeFromDiv.classList.remove('hidden');
                 timeToDiv.classList.remove('hidden');
@@ -388,6 +405,11 @@
                 document.getElementById('timeFrom').required = true;
                 document.getElementById('timeTo').required = true;
                 document.getElementById('endDate').required = false;
+
+                // إظهار القائمة المنسدلة للفرع الواحد وإخفاء المربعات المتعددة
+                singleBranchDiv.classList.remove('hidden');
+                multiBranchDiv.classList.add('hidden');
+                document.getElementById('singleBranch').required = true;
             }
         }
 
@@ -399,18 +421,29 @@
             listEl.innerHTML = uniqueDocs.map(d => `<option value="${d}">`).join('');
         }
 
-        // تحديث الكروت الإحصائية اليومية
+        // تحديث الكروت الإحصائية اليومية مع مراعاة حجب الـ 6 دقائق للكول سينتر
         function updateSummaryStats() {
             const todayStr = new Date().toISOString().split('T')[0];
-            
+            const now = Date.now();
+
+            // الفلترة الخاصة بالكول سينتر والعرض فقط (تنتظر 6 دقائق قبل الظهور)
+            const visibleAbsences = absences.filter(item => {
+                if (currentUser.role === 'callcenter' || currentUser.role === 'viewer') {
+                    const createdTime = item.createdTimestamp || now;
+                    const elapsedSeconds = (now - createdTime) / 1000;
+                    if (elapsedSeconds < 360) return false;
+                }
+                return true;
+            });
+
             // 1. إجمالي طلبات اليوم
-            const todayCount = absences.filter(a => a.date === todayStr || (a.endDate && a.date <= todayStr && a.endDate >= todayStr)).length;
+            const todayCount = visibleAbsences.filter(a => a.date === todayStr || (a.endDate && a.date <= todayStr && a.endDate >= todayStr)).length;
             
             // 2. بانتظار التنفيذ (أي طلب لم يُنفذ بعد)
-            const pendingCC = absences.filter(a => !a.ccExecuted).length;
+            const pendingCC = visibleAbsences.filter(a => !a.ccExecuted).length;
             
-            // 3. تم تنفيذها اليوم
-            const executedToday = absences.filter(a => a.ccExecuted).length;
+            // 3. تم تنفيذها
+            const executedToday = visibleAbsences.filter(a => a.ccExecuted).length;
 
             if (document.getElementById('statTodayAbsences')) document.getElementById('statTodayAbsences').innerText = todayCount;
             if (document.getElementById('statPendingCC')) document.getElementById('statPendingCC').innerText = pendingCC;
@@ -466,10 +499,9 @@
                     id: item.id,
                     entryType: item.entry_type || 'اعتذار',
                     doctorName: item.doctor_name, 
-                    reason: item.reason || 'غير محدد',
                     clinic: item.clinic, 
                     examType: item.exam_type || '-',
-                    branch: item.branch,
+                    branch: item.branch || '-',
                     date: item.date, 
                     endDate: item.end_date || null,
                     day: item.day, 
@@ -501,7 +533,23 @@
             const dateVal = document.getElementById('date').value;
             const endDateVal = document.getElementById('endDate').value;
             const clinicVal = document.getElementById('clinic').value;
-            const reasonVal = document.getElementById('reason').value;
+
+            // جلب الفرع المختار حسب نوع الإجراء
+            let branchVal = '';
+            if (entryTypeVal === 'اعتذار فترة') {
+                const selectedBranches = Array.from(document.querySelectorAll('input[name="branchOption"]:checked')).map(cb => cb.value);
+                if (selectedBranches.length === 0) {
+                    alert('يرجى اختيار فرع واحد على الأقل من فروع اعتذار الفترة!');
+                    return;
+                }
+                branchVal = selectedBranches.join('، ');
+            } else {
+                branchVal = document.getElementById('singleBranch').value;
+                if (!branchVal) {
+                    alert('يرجى اختيار الفرع!');
+                    return;
+                }
+            }
 
             // ⚠️ فحص التعارض الذكي للأطباء
             if (!editId) {
@@ -541,10 +589,9 @@
             const absencePayload = {
                 entry_type: entryTypeVal,
                 doctor_name: doctorNameVal,
-                reason: reasonVal,
                 clinic: clinicVal,
                 exam_type: examTypeVal,
-                branch: document.getElementById('branch').value,
+                branch: branchVal,
                 date: dateVal,
                 end_date: isPeriod ? endDateVal : null,
                 day: document.getElementById('day').value,
@@ -632,6 +679,17 @@
             const now = Date.now();
 
             const currentData = dataToRender.filter(item => {
+                const createdTime = item.createdTimestamp || now;
+                const elapsedSeconds = (now - createdTime) / 1000;
+
+                // 🔒 حجب البيانات عن الكول سينتر والعرض فقط خلال فترة الـ 6 دقائق المتاحة لحذف المحرر
+                if (currentUser.role === 'callcenter' || currentUser.role === 'viewer') {
+                    if (elapsedSeconds < 360) {
+                        return false;
+                    }
+                }
+
+                // إخفاء الطلب بعد 60 ثانية من تنفيذه
                 if (item.ccExecuted && item.ccExecutedTimestamp) {
                     return ((now - item.ccExecutedTimestamp) / 1000) < 60;
                 }
@@ -639,7 +697,7 @@
             });
 
             if (currentData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="13" class="p-8 text-gray-500 font-bold text-lg">لا توجد حركات أو اعتذارات مسجلة حتى الآن</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" class="p-8 text-gray-500 font-bold text-lg">لا توجد حركات أو اعتذارات مسجلة حتى الآن</td></tr>`;
                 return;
             }
 
@@ -707,9 +765,8 @@
                     </td>
 
                     <td class="py-3 px-2 border-l border-gray-200 font-black text-red-600 bg-red-50/30">${item.doctorName}</td>
-                    <td class="py-3 px-2 border-l border-gray-200 font-bold text-xs text-gray-700">${item.reason}</td>
                     <td class="py-3 px-2 border-l border-gray-200 font-bold">${clinicDisplay}</td>
-                    <td class="py-3 px-2 border-l border-gray-200 font-bold">${branchBadges[item.branch] || item.branch}</td>
+                    <td class="py-3 px-2 border-l border-gray-200 font-bold">${renderBranchBadges(item.branch)}</td>
                     <td class="py-3 px-2 border-l border-gray-200 font-bold">${dateDisplay}</td>
                     <td class="py-3 px-2 border-l border-gray-200 font-bold text-slate-700">${item.day}</td>
                     <td class="py-3 px-2 border-l border-gray-200 font-bold text-slate-700">${item.timeFrom}</td>
@@ -738,7 +795,7 @@
                                 </label>
 
                                 <!-- زر الواتساب -->
-                                <button onclick="copyWhatsAppText('${item.doctorName}', '${item.entryType}', '${item.clinic}', '${item.branch}', '${item.date}', '${item.endDate || ''}', '${item.day}', '${item.timeFrom}', '${item.timeTo}', '${item.notes}', '${item.reason}')" class="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-black px-2.5 py-1 rounded-lg shadow transition" title="نسخ رسالة منسقة للواتساب">
+                                <button onclick="copyWhatsAppText('${item.doctorName}', '${item.entryType}', '${item.clinic}', '${item.branch}', '${item.date}', '${item.endDate || ''}', '${item.day}', '${item.timeFrom}', '${item.timeTo}', '${item.substituteDoctor}', '${item.notes}')" class="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-black px-2.5 py-1 rounded-lg shadow transition" title="نسخ رسالة منسقة للواتساب">
                                     <span>📱</span>
                                     <span>واتساب</span>
                                 </button>
@@ -767,7 +824,6 @@
             handleEntryTypeChange();
 
             document.getElementById('doctorName').value = item.doctorName;
-            document.getElementById('reason').value = item.reason || 'غير محدد';
             document.getElementById('clinic').value = item.clinic;
             handleClinicChange();
 
@@ -776,7 +832,16 @@
                 renderSelectedExamTags();
             }
 
-            document.getElementById('branch').value = item.branch;
+            // ضبط اختيار الفرع أو الفروع
+            if (item.entryType === 'اعتذار فترة') {
+                const branchesInItem = (item.branch || '').split(/[،,]/).map(b => b.trim());
+                document.querySelectorAll('input[name="branchOption"]').forEach(cb => {
+                    cb.checked = branchesInItem.includes(cb.value);
+                });
+            } else {
+                document.getElementById('singleBranch').value = item.branch || '';
+            }
+
             document.getElementById('date').value = item.date;
             if (item.endDate) document.getElementById('endDate').value = item.endDate;
             document.getElementById('day').value = item.day;
@@ -795,7 +860,10 @@
             document.getElementById('absenceForm').reset();
             document.getElementById('editingAbsenceId').value = '';
             document.getElementById('entryType').value = 'اعتذار';
-            document.getElementById('reason').value = 'غير محدد';
+            
+            document.getElementById('singleBranch').value = '';
+            document.querySelectorAll('input[name="branchOption"]').forEach(cb => cb.checked = false);
+
             selectedExamsList = [];
             renderSelectedExamTags();
             handleEntryTypeChange();
@@ -877,18 +945,26 @@
             client.channel('public:db_changes')
               .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doctor_absences' }, (payload) => {
                   fetchAbsences();
-                  playNotificationSound();
-                  showToast(`📢 تم إضافة (${payload.new.entry_type || 'إجراء'}) جديد للطبيب (${payload.new.doctor_name}) - ${payload.new.branch}`, 'success');
+                  if (currentUser.role !== 'callcenter' && currentUser.role !== 'viewer') {
+                      playNotificationSound();
+                      showToast(`📢 تم إضافة (${payload.new.entry_type || 'إجراء'}) جديد للطبيب (${payload.new.doctor_name}) - ${payload.new.branch}`, 'success');
+                  }
               })
               .on('postgres_changes', { event: '*', schema: 'public', table: 'doctor_absences' }, () => fetchAbsences())
               .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
                   fetchNotifications();
-                  playNotificationSound();
+                  if (currentUser.role !== 'callcenter' && currentUser.role !== 'viewer') {
+                      playNotificationSound();
+                  }
               })
               .subscribe();
         }
 
-        setInterval(() => renderTable(), 1000);
+        setInterval(() => {
+            renderTable();
+            updateSummaryStats();
+        }, 1000);
+
         initPage();
     </script>
 </body>
