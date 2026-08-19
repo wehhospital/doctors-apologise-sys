@@ -25,7 +25,7 @@
         <div class="bg-white p-4 md:p-5 rounded-xl shadow-md border-t-4 border-red-600 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl md:text-3xl font-black text-red-600">جدول إجراءات واعتذارات الأطباء</h1>
-                <p class="text-gray-600 text-xs font-bold mt-1">Made By Abdallah - IT Department</p>
+                <p class="text-gray-600 text-xs font-bold mt-1">نظام الإدارة اللحظي وتوثيق الطلبات (Realtime Supabase)</p>
             </div>
 
             <div class="flex items-center gap-3 no-print">
@@ -100,7 +100,7 @@
                     <select id="entryType" required onchange="handleEntryTypeChange()" class="w-full border border-gray-400 rounded-lg p-2.5 text-sm font-bold outline-none bg-white">
                         <option value="اعتذار" selected style="background-color: #fee2e2; color: #b91c1c; font-weight: bold;">🔴 اعتذار يومي</option>
                         <option value="اعتذار فترة" style="background-color: #f3e8ff; color: #6b21a8; font-weight: bold;">🟣 اعتذار فترة (من يوم ليوم/شهر)</option>
-                        <option value="إضافة عيادة" style="background-color: #dcfce7; color: #15803d; font-weight: bold;">🟢 إضافة عيادة</option>
+                        <option value="إضافة" style="background-color: #dcfce7; color: #15803d; font-weight: bold;">🟢 إضافة</option>
                         <option value="تعديل" style="background-color: #fef3c7; color: #b45309; font-weight: bold;">🟠 تعديل</option>
                     </select>
                 </div>
@@ -137,6 +137,7 @@
                         <option value="Specular">Specular</option>
                         <option value="VEP/ERG">VEP/ERG</option>
                         <option value="Hess Screen Test">Hess Screen Test</option>
+                        <option value="Fluorescein">Fluorescein</option>
                         <option value="All">All (الكل)</option>
                     </select>
                     <p id="examTypeHint" class="text-[10px] text-gray-400 font-bold mt-1">يتطلب اختيار 'فحص' لتفعيل القائمة</p>
@@ -304,7 +305,8 @@
         const entryTypeCellStyles = {
             'اعتذار': 'bg-red-500 text-white font-black border-l border-red-600',
             'اعتذار فترة': 'bg-purple-600 text-white font-black border-l border-purple-700',
-            'إضافة عيادة': 'bg-emerald-600 text-white font-black border-l border-emerald-700',
+            'إضافة': 'bg-emerald-600 text-white font-black border-l border-emerald-700',
+            'إضافة عيادة': 'bg-emerald-600 text-white font-black border-l border-emerald-700', // توافقية البيانات القديمة
             'تعديل': 'bg-amber-500 text-white font-black border-l border-amber-600'
         };
 
