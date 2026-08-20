@@ -306,7 +306,7 @@
             'اعتذار': 'bg-red-500 text-white font-black border-l border-red-600',
             'اعتذار فترة': 'bg-purple-600 text-white font-black border-l border-purple-700',
             'إضافة': 'bg-emerald-600 text-white font-black border-l border-emerald-700',
-            'إضافة عيادة': 'bg-emerald-600 text-white font-black border-l border-emerald-700', // توافقية البيانات القديمة
+            'إضافة عيادة': 'bg-emerald-600 text-white font-black border-l border-emerald-700',
             'تعديل': 'bg-amber-500 text-white font-black border-l border-amber-600'
         };
 
@@ -834,7 +834,7 @@
                 renderSelectedExamTags();
             }
 
-            // ضبط اختيار الفرع أو الفروع
+            // ضبط اختيار الفرع أو الفروع حسب نوع الإجراء
             if (item.entryType === 'اعتذار فترة') {
                 const branchesInItem = (item.branch || '').split(/[،,]/).map(b => b.trim());
                 document.querySelectorAll('input[name="branchOption"]').forEach(cb => {
@@ -875,6 +875,7 @@
             document.getElementById('absenceCancelBtn').classList.add('hidden');
         }
 
+        // دالة الحذف وتحديث الإشعارات المرتبطة للطبيب
         async function deleteItem(id) {
             const target = absences.find(a => a.id === id);
             if (!target) return;
@@ -890,19 +891,30 @@
 
             if (confirm('هل أنت تأكد من حذف هذا السجل؟')) {
                 const client = getSupabase();
-                if (client) await client.from('doctor_absences').delete().eq('id', id);
+                if (client) {
+                    await client.from('doctor_absences').delete().eq('id', id);
+                    if (target.doctorName) {
+                        await client.from('notifications').delete().ilike('text', `%${target.doctorName}%`);
+                    }
+                }
                 await createLog('حذف طلب', `تم حذف الإجراء/الطلب للطبيب (${target ? target.doctorName : ''}) بواسطة (${currentUser.name})`);
                 fetchAbsences();
+                fetchNotifications();
             }
         }
 
+        // دالة تفريغ الكل وتفريغ الإشعارات
         async function clearAllData() {
             if (currentUser.role !== 'admin') return;
-            if (confirm('تنبيه للمدير: هل تريد مسح جميع البيانات؟')) {
+            if (confirm('تنبيه للمدير: هل تريد مسح جميع البيانات والإشعارات؟')) {
                 const client = getSupabase();
-                if (client) await client.from('doctor_absences').delete().neq('id', 0);
-                await createLog('مسح الكل', 'قام المدير بمسح الجداول بالكامل');
+                if (client) {
+                    await client.from('doctor_absences').delete().neq('id', 0);
+                    await client.from('notifications').delete().neq('id', 0);
+                }
+                await createLog('مسح الكل', 'قام المدير بمسح الجداول والإشعارات بالكامل');
                 fetchAbsences();
+                fetchNotifications();
             }
         }
 
@@ -947,6 +959,7 @@
             client.channel('public:db_changes')
               .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'doctor_absences' }, (payload) => {
                   fetchAbsences();
+                  // التنبيه الفوري بالصوت والتوست يظهر للمدير والمحرر فقط لحين انتهاء الـ 6 دقائق للكول سينتر
                   if (currentUser.role !== 'callcenter' && currentUser.role !== 'viewer') {
                       playNotificationSound();
                       showToast(`📢 تم إضافة (${payload.new.entry_type || 'إجراء'}) جديد للطبيب (${payload.new.doctor_name}) - ${payload.new.branch}`, 'success');
