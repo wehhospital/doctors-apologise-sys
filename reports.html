@@ -51,7 +51,7 @@
         <div class="bg-white p-4 md:p-5 rounded-xl shadow-md border-t-4 border-gray-800 flex justify-between items-center no-print">
             <div>
                 <h1 class="text-2xl md:text-3xl font-black text-gray-900">📊 تقارير وإحصائيات الاعتذارات والطلبات</h1>
-                <p class="text-gray-600 text-xs font-bold mt-1">Made By Abdallah - IT Department</p>
+                <p class="text-gray-600 text-xs font-bold mt-1">عرض تفصيلي رسمي للاعتذارات ومُدَدها وأوقات إدخالها بالنظام</p>
             </div>
             <div class="flex items-center gap-3">
                 <div class="text-right">
@@ -186,8 +186,11 @@
                 document.getElementById('actionHeaderReport').classList.remove('hidden');
             }
             
-            // كتابة تفاصيل الهيدر المطبوع
-            const nowFormatted = new Date().toLocaleString('ar-EG');
+            // كتابة تفاصيل الهيدر المطبوع بالإنجليزية
+            const nowFormatted = new Date().toLocaleString('en-US', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+            });
             document.getElementById('printMetaInfo').innerText = `تاريخ استخراج التقرير: ${nowFormatted} | تم الاستخراج بواسطة: ${currentUser.name}`;
             
             loadReportData();
@@ -314,7 +317,10 @@
                     ? `من ${item.date} إلى ${item.end_date}`
                     : `${item.date} - من ${item.time_from || '-'} إلى ${item.time_to || '-'}`;
                 
-                let createdTime = item.created_at ? new Date(item.created_at).toLocaleString('ar-EG') : '-';
+                let createdTime = item.created_at ? new Date(item.created_at).toLocaleString('en-US', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+                }) : '-';
                 let clinicText = item.clinic || '-';
                 if (item.clinic === 'فحص' && item.exam_type && item.exam_type !== '-') clinicText += ` (${item.exam_type})`;
 
@@ -367,10 +373,13 @@
                         alert("⚠️ فشل الحذف من السيرفر: " + error.message);
                         return;
                     }
+                    if (target && target.doctor_name) {
+                        await client.from('notifications').delete().ilike('text', `%${target.doctor_name}%`);
+                    }
                 }
 
                 await createLog('حذف من التقرير', `قام المدير (${currentUser.name}) بحذف طلب/اعتذار الطبيب (${target ? target.doctor_name : ''}) من صفحة التقارير`);
-                showToast("✅ تم حذف السجل بنجاح من التقرير", "success");
+                showToast("✅ تم حذف السجل بنجاح من التقرير والإشعارات", "success");
                 loadReportData();
             }
         }
@@ -401,7 +410,7 @@
             }
         }
 
-        // عرض سطور التقرير بدون ألوان ومزودة بزار الحذف للأدمن
+        // عرض سطور التقرير بصياغة الوقت والتاريخ الإنجليزية
         function renderReportTable(data) {
             const tbody = document.getElementById('reportTableBody');
             tbody.innerHTML = '';
@@ -425,9 +434,10 @@
                     durationText = `${item.date} (${item.day || ''}) - من ${item.time_from || '-'} إلى ${item.time_to || '-'}`;
                 }
 
-                const createdTimeFormatted = item.created_at ? new Date(item.created_at).toLocaleString('ar-EG', {
+                // 🕒 الصياغة الإنجليزية للوقت والتاريخ
+                const createdTimeFormatted = item.created_at ? new Date(item.created_at).toLocaleString('en-US', {
                     year: 'numeric', month: '2-digit', day: '2-digit',
-                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
                 }) : '-';
 
                 let clinicText = item.clinic || '-';

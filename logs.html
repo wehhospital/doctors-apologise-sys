@@ -12,43 +12,77 @@
     <style>
         body { font-family: 'Cairo', sans-serif; }
         th, td { white-space: nowrap !important; padding: 12px 10px !important; }
+
+        /* تنسيق الطباعة الرسمي والواضح */
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; color: black !important; }
+            .print-area { box-shadow: none !important; border: none !important; width: 100% !important; margin: 0 !important; }
+            table { width: 100% !important; border-collapse: collapse !important; border: 2px solid #000 !important; }
+            th, td { 
+                border: 1px solid #000 !important; 
+                padding: 8px 6px !important; 
+                font-size: 10pt !important; 
+                color: #000 !important; 
+                background: transparent !important; 
+                white-space: normal !important;
+                font-weight: bold !important;
+            }
+            th { background-color: #f0f0f0 !important; font-size: 11pt !important; -webkit-print-color-adjust: exact; }
+            tr { page-break-inside: avoid !important; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 md:p-4">
 
     <div class="w-full max-w-[99%] mx-auto space-y-4">
         
+        <!-- هيدر رسمي يظهر في الطباعة فقط -->
+        <div class="hidden print:block text-center border-b-2 border-black pb-3 mb-4">
+            <h1 class="text-2xl font-black text-black">سجل تحركات ونشاط النظام الرسمي (Audit Logs)</h1>
+            <p id="printMetaInfo" class="text-xs font-bold text-gray-700 mt-1"></p>
+        </div>
+
         <!-- الشريط العلوي -->
-        <div class="bg-white p-4 md:p-5 rounded-xl shadow-md border-t-4 border-gray-800 flex justify-between items-center">
+        <div class="bg-white p-4 md:p-5 rounded-xl shadow-md border-t-4 border-gray-800 flex justify-between items-center no-print">
             <div>
-                <h1 class="text-2xl md:text-3xl font-black text-gray-800">📜 سجل تحركات النظام الشامل (Live Logs)</h1>
-                <p class="text-gray-600 text-xs font-bold mt-1">Made By Abdallah - IT Department</p>
+                <h1 class="text-2xl md:text-3xl font-black text-gray-800">📜 سجل تحركات النظام الشامل (Live Audit Logs)</h1>
+                <p class="text-gray-600 text-xs font-bold mt-1">عرض جميع الأحداث والأنشطة لجميع المستخدمين في نفس اللحظة</p>
             </div>
             <button onclick="logout()" class="bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold px-4 py-2 rounded-lg transition">خروج 🚪</button>
         </div>
 
         <!-- أزرار التنقل بين الصفحات -->
-        <div class="flex gap-2 border-b border-gray-300 pb-2">
+        <div class="flex gap-2 border-b border-gray-300 pb-2 no-print">
             <a href="index.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow">📋 جدول الاعتذارات</a>
             <a href="users.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow">👥 إدارة المستخدمين</a>
             <a href="logs.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-gray-900 text-white shadow">📜 سجل العمليات (Logs)</a>
         </div>
 
-        <!-- الهيدر والتحكم -->
-        <div class="bg-white p-4 rounded-xl shadow-md flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <span class="text-xl">📊</span>
-                <h2 class="text-base font-black text-gray-800">قائمة جميع الأحداث المباشرة (سوبا بيز أونلاين)</h2>
-                <span id="logsCountBadge" class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full">0 أحداث</span>
+        <!-- الهيدر والتحكم والسيرفر -->
+        <div class="bg-white p-4 rounded-xl shadow-md space-y-3 no-print">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <span class="text-xl">📊</span>
+                    <h2 class="text-base font-black text-gray-800">قائمة جميع الأحداث المباشرة (سوبا بيز أونلاين)</h2>
+                    <span id="logsCountBadge" class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full">0 أحداث</span>
+                </div>
+
+                <div class="flex gap-2 w-full sm:w-auto justify-end">
+                    <button onclick="loadLogsFromDatabase()" class="bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold transition">🔄 تحديث يدوياً</button>
+                    <button onclick="window.print()" class="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow">🖨️ طباعة السجل</button>
+                    <button onclick="deleteAllLogs()" class="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-xs font-bold transition">🧹 تفريغ السجل بالكامل</button>
+                </div>
             </div>
-            <div class="flex gap-2">
-                <button onclick="loadLogsFromDatabase()" class="bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold transition">🔄 تحديث يدوياً</button>
-                <button onclick="deleteAllLogs()" class="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-xs font-bold transition">🧹 تفريغ السجل بالكامل</button>
+
+            <!-- 🔍 شريط البحث اللحظي في اللوجز -->
+            <div class="border-t pt-3">
+                <input type="text" id="logSearchInput" onkeyup="filterLogs()" placeholder="🔍 بحث عن اسم المستخدم، الفرع، نوع الإجراء، الوقت، أو التفاصيل..." class="w-full sm:w-96 border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-gray-800">
             </div>
         </div>
 
         <!-- جدول اللوجز -->
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-300 w-full">
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-300 w-full print-area">
             <table class="w-full text-center border-collapse">
                 <thead>
                     <tr class="bg-gray-200 border-b-2 border-gray-400 text-black text-sm font-black">
@@ -59,7 +93,7 @@
                         <th class="p-3.5">التفاصيل الكاملة</th>
                     </tr>
                 </thead>
-                <tbody id="logsTableBody" class="divide-y divide-gray-300 text-sm font-bold">
+                <tbody id="logsTableBody" class="divide-y divide-gray-300 text-sm font-bold text-black">
                     <tr>
                         <td colspan="5" class="p-8 text-gray-400">جاري تحميل السجلات أونلاين...</td>
                     </tr>
@@ -72,12 +106,28 @@
     <script>
         // 1. التحقق من أن الحساب الحالي أدمن
         const currentUser = checkAuth('admin');
+        let rawLogsData = [];
+        let currentlyFilteredLogs = [];
 
-        // 2. دالة جلب اللوجز أونلاين مباشرة من Supabase بدون أي تعقيدات محليّة
+        function updatePrintMetaInfo() {
+            if (currentUser) {
+                const nowFormatted = new Date().toLocaleString('en-US', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+                });
+                const printEl = document.getElementById('printMetaInfo');
+                if (printEl) {
+                    printEl.innerText = `تاريخ استخراج السجل: ${nowFormatted} | تم الاستخراج بواسطة: ${currentUser.name}`;
+                }
+            }
+        }
+
+        // 2. دالة جلب اللوجز أونلاين مباشرة من Supabase
         async function loadLogsFromDatabase() {
             const tbody = document.getElementById('logsTableBody');
-            const badge = document.getElementById('logsCountBadge');
             const client = getSupabase();
+
+            updatePrintMetaInfo();
 
             if (!client) {
                 tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-red-600 font-bold">❌ فشل الاتصال بقاعدة البيانات</td></tr>`;
@@ -97,17 +147,54 @@
 
             if (!data || data.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-gray-400 font-bold text-base">لا يوجد أي حركات مسجلة حتى الآن</td></tr>`;
-                badge.innerText = `0 أحداث`;
+                document.getElementById('logsCountBadge').innerText = `0 أحداث`;
+                rawLogsData = [];
+                currentlyFilteredLogs = [];
                 return;
             }
+
+            rawLogsData = data;
+            filterLogs();
+        }
+
+        // 🔍 دالة الفلترة والسيرفر في اللوجز
+        function filterLogs() {
+            const query = (document.getElementById('logSearchInput')?.value || '').toLowerCase().trim();
+
+            if (!query) {
+                currentlyFilteredLogs = [...rawLogsData];
+            } else {
+                currentlyFilteredLogs = rawLogsData.filter(log => {
+                    const userName = (log.user_name || '').toLowerCase();
+                    const action = (log.action || '').toLowerCase();
+                    const details = (log.details || '').toLowerCase();
+                    const dateFormatted = log.created_at ? new Date(log.created_at).toLocaleString('en-US').toLowerCase() : '';
+
+                    return userName.includes(query) || action.includes(query) || details.includes(query) || dateFormatted.includes(query);
+                });
+            }
+
+            renderLogsTable(currentlyFilteredLogs);
+        }
+
+        // عرض السطور في الجدول بصياغة الوقت والتاريخ الإنجليزية
+        function renderLogsTable(data) {
+            const tbody = document.getElementById('logsTableBody');
+            const badge = document.getElementById('logsCountBadge');
 
             badge.innerText = `${data.length} حدث مسجل`;
             tbody.innerHTML = '';
 
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-gray-400 font-bold text-base">لا توجد سجلات تطابق البحث الحالي</td></tr>`;
+                return;
+            }
+
             data.forEach((log, index) => {
-                const dateFormatted = log.created_at ? new Date(log.created_at).toLocaleString('ar-EG', {
+                // 🕒 الصياغة الإنجليزية التاريخ والوقت
+                const dateFormatted = log.created_at ? new Date(log.created_at).toLocaleString('en-US', {
                     year: 'numeric', month: '2-digit', day: '2-digit',
-                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
                 }) : '-';
 
                 const tr = document.createElement('tr');
@@ -115,7 +202,7 @@
 
                 tr.innerHTML = `
                     <td class="p-3 border-l border-gray-300 font-black text-gray-500">${index + 1}</td>
-                    <td class="p-3 border-l border-gray-300 text-gray-600 dir-ltr text-xs">${dateFormatted}</td>
+                    <td class="p-3 border-l border-gray-300 text-gray-800 font-mono text-xs font-bold dir-ltr">${dateFormatted}</td>
                     <td class="p-3 border-l border-gray-300 text-black font-extrabold">${log.user_name || 'مستخدم'}</td>
                     <td class="p-3 border-l border-gray-300 font-black text-red-600 text-xs">${log.action || '-'}</td>
                     <td class="p-3 text-right pr-6 font-semibold text-gray-800">${log.details || '-'}</td>
