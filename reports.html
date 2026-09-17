@@ -70,20 +70,20 @@
             <a id="navLogsBtn" href="logs.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">📜 سجل العمليات (Logs)</a>
         </div>
 
-        <!-- أشرطة الفلترة والبحث السريع والفلترة بالتواريخ -->
+        <!-- أشرطة الفلترة والبحث السريع والفلترة بنطاق التواريخ -->
         <div class="bg-white p-4 rounded-xl shadow-md space-y-3 no-print">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-gray-600 mb-1">🔍 بحث نصي الشامل:</label>
-                    <input type="text" id="searchInput" onkeyup="filterReport()" placeholder="بحث باسم الطبيب، الطبيب البديل، اليوزر، الفرع، الملاحظات..." class="w-full border border-gray-400 rounded-lg p-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-gray-800">
+                    <label class="block text-xs font-bold text-gray-600 mb-1">🔍 بحث نصي وبالمواعيد (مثال: 9/9 أو 2026-09-09):</label>
+                    <input type="text" id="searchInput" onkeyup="filterReport()" placeholder="بحث باسم الطبيب، البديل، الفرع، الملاحظات، أو تاريخ إدخال محدد (9/9)..." class="w-full border border-gray-400 rounded-lg p-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-gray-800">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">📅 من تاريخ:</label>
-                    <input type="date" id="reportDateFrom" onchange="filterReport()" class="w-full border border-gray-400 rounded-lg p-2 text-sm font-semibold outline-none">
+                    <label class="block text-xs font-bold text-gray-600 mb-1">📅 من تاريخ الإدخال:</label>
+                    <input type="date" id="reportDateFrom" onchange="filterReport()" class="w-full border border-gray-400 rounded-lg p-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-gray-800">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">📅 إلى تاريخ:</label>
-                    <input type="date" id="reportDateTo" onchange="filterReport()" class="w-full border border-gray-400 rounded-lg p-2 text-sm font-semibold outline-none">
+                    <label class="block text-xs font-bold text-gray-600 mb-1">📅 إلى تاريخ الإدخال:</label>
+                    <input type="date" id="reportDateTo" onchange="filterReport()" class="w-full border border-gray-400 rounded-lg p-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-gray-800">
                 </div>
             </div>
 
@@ -172,20 +172,87 @@
     </div>
 
     <script>
-        // 🔒 السماح للأدمن والـ editor فقط بدخول صفحة التقارير
-        const currentUser = checkAuth(['admin', 'editor']);
+        // 🔒 السماح للأدمن ومساعد المدير والـ editor بدخول صفحة التقارير
+        const currentUser = checkAuth(['admin', 'subadmin', 'editor']);
         let rawReportData = [];
         let currentlyFilteredData = [];
+
+        // تحويل أي تاريخ إلى صيغة YYYY-MM-DD بالتوقيت المحلي بدقة
+        function getLocalDateISO(dateInput) {
+            if (!dateInput) return '';
+            const d = new Date(dateInput);
+            if (isNaN(d.getTime())) return '';
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 🎯 مُحلل التواريخ الذكي والدقيق للبحث
+        function parseDateQuery(q) {
+            if (!q) return null;
+            const clean = q.trim().replace(/-/g, '/');
+            const parts = clean.split('/');
+
+            if (parts.length === 3 && parts[0].length === 4) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10);
+                const day = parseInt(parts[2], 10);
+                if (!isNaN(year) && !isNaN(month) && !isNaN(day)) return { day, month, year };
+            }
+
+            if (parts.length === 3 && parts[2].length === 4) {
+                const num1 = parseInt(parts[0], 10);
+                const num2 = parseInt(parts[1], 10);
+                const year = parseInt(parts[2], 10);
+                if (!isNaN(num1) && !isNaN(num2) && !isNaN(year)) return { num1, num2, year };
+            }
+
+            if (parts.length === 2) {
+                const num1 = parseInt(parts[0], 10);
+                const num2 = parseInt(parts[1], 10);
+                if (!isNaN(num1) && !isNaN(num2) && num1 > 0 && num1 <= 31 && num2 > 0 && num2 <= 31) {
+                    return { num1, num2 };
+                }
+            }
+
+            return null;
+        }
+
+        function isCreatedOnDate(createdAt, parsedQuery) {
+            if (!createdAt || !parsedQuery) return false;
+            const d = new Date(createdAt);
+            if (isNaN(d.getTime())) return false;
+
+            const day = d.getDate();
+            const month = d.getMonth() + 1;
+            const year = d.getFullYear();
+
+            if (parsedQuery.year && parsedQuery.year !== year) return false;
+
+            if (parsedQuery.day && parsedQuery.month) {
+                return day === parsedQuery.day && month === parsedQuery.month;
+            }
+
+            if (parsedQuery.num1 && parsedQuery.num2) {
+                return (day === parsedQuery.num1 && month === parsedQuery.num2) ||
+                       (day === parsedQuery.num2 && month === parsedQuery.num1);
+            }
+
+            return false;
+        }
 
         function initReportsPage() {
             document.getElementById('currentUserDisplay').innerText = currentUser.name;
             
-            // تفعيل أزرار الأدمن
+            // تفعيل أزرار الأدمن الأساسي (حذف ومسح وإدارة مستخدمين)
             if (currentUser.role === 'admin') {
                 document.getElementById('navUsersBtn').classList.remove('hidden');
                 document.getElementById('navLogsBtn').classList.remove('hidden');
                 document.getElementById('adminClearReportBtn').classList.remove('hidden');
                 document.getElementById('actionHeaderReport').classList.remove('hidden');
+            } else if (currentUser.role === 'subadmin') {
+                document.getElementById('navLogsBtn').classList.remove('hidden');
             }
             
             // كتابة تفاصيل الهيدر المطبوع بالإنجليزية
@@ -237,27 +304,53 @@
             filterReport();
         }
 
-        // البحث والفلترة بالنص والنطاق الزمني
+        // 🔍 دالة الفلترة الشاملة الذكية (نص + تاريخ محدد + نطاق زمني)
         function filterReport() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const rawQuery = document.getElementById('searchInput').value.trim();
+            const query = rawQuery.toLowerCase();
             const dateFrom = document.getElementById('reportDateFrom').value;
             const dateTo = document.getElementById('reportDateTo').value;
 
+            // هل نص البحث عبارة عن تاريخ محدد (مثال 9/9)؟
+            const parsedDate = parseDateQuery(rawQuery);
+
             currentlyFilteredData = rawReportData.filter(item => {
-                const docName = (item.doctor_name || '').toLowerCase();
-                const subDoc = (item.substitute_doctor || '').toLowerCase();
-                const userName = (item.created_by_name || '').toLowerCase();
-                const branch = (item.branch || '').toLowerCase();
-                const entryType = (item.entry_type || '').toLowerCase();
-                const notes = (item.notes || '').toLowerCase();
+                // 1. فحص خانة البحث النصية
+                let matchesSearch = true;
 
-                const matchesText = !query || (docName.includes(query) || subDoc.includes(query) || userName.includes(query) || branch.includes(query) || entryType.includes(query) || notes.includes(query));
+                if (parsedDate) {
+                    // مطابقة دقيقة وصارمة لتاريخ إدخال الطلب بالنظام
+                    matchesSearch = isCreatedOnDate(item.created_at, parsedDate);
+                } else if (query) {
+                    const docName = (item.doctor_name || '').toLowerCase();
+                    const subDoc = (item.substitute_doctor || '').toLowerCase();
+                    const userName = (item.created_by_name || '').toLowerCase();
+                    const branch = (item.branch || '').toLowerCase();
+                    const entryType = (item.entry_type || '').toLowerCase();
+                    const notes = (item.notes || '').toLowerCase();
 
-                let matchesDate = true;
-                if (dateFrom && item.date < dateFrom) matchesDate = false;
-                if (dateTo && item.date > dateTo) matchesDate = false;
+                    matchesSearch = (
+                        docName.includes(query) ||
+                        subDoc.includes(query) ||
+                        userName.includes(query) ||
+                        branch.includes(query) ||
+                        entryType.includes(query) ||
+                        notes.includes(query)
+                    );
+                }
 
-                return matchesText && matchesDate;
+                // 2. فحص النطاق الزمني (من تاريخ إلى تاريخ) بناءً على لحظة تسجيل وإدخال الطلب بالنظام
+                let matchesDateRange = true;
+                const creationDateISO = getLocalDateISO(item.created_at) || item.date;
+
+                if (dateFrom && creationDateISO < dateFrom) {
+                    matchesDateRange = false;
+                }
+                if (dateTo && creationDateISO > dateTo) {
+                    matchesDateRange = false;
+                }
+
+                return matchesSearch && matchesDateRange;
             });
 
             renderReportTable(currentlyFilteredData);
@@ -322,7 +415,8 @@
                     ? `من ${item.date} إلى ${item.end_date}`
                     : `${item.date} - من ${item.time_from || '-'} إلى ${item.time_to || '-'}`;
                 
-                let createdTime = item.created_at ? new Date(item.created_at).toLocaleString('en-US', {
+                // لحظة تسجيل الطلب الفعلية بالنظام بالإنجليزية
+                let systemEntryTime = item.created_at ? new Date(item.created_at).toLocaleString('en-US', {
                     year: 'numeric', month: '2-digit', day: '2-digit',
                     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
                 }) : '-';
@@ -343,7 +437,7 @@
                         <td>${durationText}</td>
                         <td><b>${subDocDisplay}</b></td>
                         <td>${notesDisplay}</td>
-                        <td style="direction: ltr;">${createdTime}</td>
+                        <td style="direction: ltr;">${systemEntryTime}</td>
                     </tr>
                 `;
             });
@@ -445,11 +539,11 @@
                     durationText = `${item.date} (${item.day || ''}) - من ${item.time_from || '-'} إلى ${item.time_to || '-'}`;
                 }
 
-                // 🕒 الصياغة الإنجليزية للوقت والتاريخ
-                const createdTimeFormatted = item.created_at ? new Date(item.created_at).toLocaleString('en-US', {
+                // ⏰ وقت وتاريخ لحظة إدخال وتسجيل الطلب بالنظام بالإنجليزية
+                const systemEntryTime = item.created_at ? new Date(item.created_at).toLocaleString('en-US', {
                     year: 'numeric', month: '2-digit', day: '2-digit',
                     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
-                }) : '-';
+                }) : 'غير مسجل';
 
                 let clinicText = item.clinic || '-';
                 if (item.clinic === 'فحص' && item.exam_type && item.exam_type !== '-') {
@@ -479,7 +573,7 @@
                     <td class="py-3 px-2 border-l border-gray-300 font-semibold text-xs text-black">${durationText}</td>
                     <td class="py-3 px-2 border-l border-gray-300 font-extrabold text-red-700 bg-red-50/20">${subDocDisplay}</td>
                     <td class="py-3 px-2 border-l border-gray-300 font-semibold text-xs text-gray-800">${notesDisplay}</td>
-                    <td class="py-3 px-2 border-l border-gray-300 text-black font-mono text-xs dir-ltr font-bold">${createdTimeFormatted}</td>
+                    <td class="py-3 px-2 border-l border-gray-300 text-black font-mono text-xs dir-ltr font-bold">${systemEntryTime}</td>
                     ${actionColHTML}
                 `;
                 tbody.appendChild(tr);

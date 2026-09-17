@@ -47,15 +47,16 @@
         <div class="bg-white p-4 md:p-5 rounded-xl shadow-md border-t-4 border-gray-800 flex justify-between items-center no-print">
             <div>
                 <h1 class="text-2xl md:text-3xl font-black text-gray-800">📜 سجل تحركات النظام الشامل (Live Audit Logs)</h1>
-                <p class="text-gray-600 text-xs font-bold mt-1">عرض جميع الأحداث والأنشطة لجميع المستخدمين في نفس اللحظة</p>
+                <p class="text-gray-600 text-xs font-bold mt-1">Made By Abdallah - IT Department</p>
             </div>
             <button onclick="logout()" class="bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold px-4 py-2 rounded-lg transition">خروج 🚪</button>
         </div>
 
         <!-- أزرار التنقل بين الصفحات -->
-        <div class="flex gap-2 border-b border-gray-300 pb-2 no-print">
+        <div class="flex gap-2 border-b border-gray-300 pb-2 no-print overflow-x-auto">
             <a href="index.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow">📋 جدول الاعتذارات</a>
-            <a href="users.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow">👥 إدارة المستخدمين</a>
+            <a id="navReportsBtn" href="reports.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow">📊 التقارير والإحصائيات</a>
+            <a id="navUsersBtn" href="users.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-white text-gray-700 hover:bg-gray-200 shadow hidden">👥 إدارة المستخدمين</a>
             <a href="logs.html" class="px-5 py-2.5 rounded-lg text-sm font-extrabold bg-gray-900 text-white shadow">📜 سجل العمليات (Logs)</a>
         </div>
 
@@ -71,7 +72,7 @@
                 <div class="flex gap-2 w-full sm:w-auto justify-end">
                     <button onclick="loadLogsFromDatabase()" class="bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold transition">🔄 تحديث يدوياً</button>
                     <button onclick="window.print()" class="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow">🖨️ طباعة السجل</button>
-                    <button onclick="deleteAllLogs()" class="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-xs font-bold transition">🧹 تفريغ السجل بالكامل</button>
+                    <button id="clearAllLogsBtn" onclick="deleteAllLogs()" class="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-xs font-bold transition hidden">🧹 تفريغ السجل بالكامل</button>
                 </div>
             </div>
 
@@ -104,8 +105,8 @@
     </div>
 
     <script>
-        // 1. التحقق من أن الحساب الحالي أدمن
-        const currentUser = checkAuth('admin');
+        // 1. التحقق من أن الحساب الحالي أدمن أو مشرف
+        const currentUser = checkAuth(['admin', 'subadmin']);
         let rawLogsData = [];
         let currentlyFilteredLogs = [];
 
@@ -128,6 +129,12 @@
             const client = getSupabase();
 
             updatePrintMetaInfo();
+
+            // إظهار أزرار الأدمن الأساسي فقط
+            if (currentUser && currentUser.role === 'admin') {
+                document.getElementById('navUsersBtn')?.classList.remove('hidden');
+                document.getElementById('clearAllLogsBtn')?.classList.remove('hidden');
+            }
 
             if (!client) {
                 tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-red-600 font-bold">❌ فشل الاتصال بقاعدة البيانات</td></tr>`;
@@ -157,7 +164,7 @@
             filterLogs();
         }
 
-        // 🔍 دالة الفلترة والسيرفر في اللوجز
+        // 🔍 دالة الفلترة والبحث في اللوجز
         function filterLogs() {
             const query = (document.getElementById('logSearchInput')?.value || '').toLowerCase().trim();
 
@@ -191,7 +198,6 @@
             }
 
             data.forEach((log, index) => {
-                // 🕒 الصياغة الإنجليزية التاريخ والوقت
                 const dateFormatted = log.created_at ? new Date(log.created_at).toLocaleString('en-US', {
                     year: 'numeric', month: '2-digit', day: '2-digit',
                     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
@@ -211,8 +217,9 @@
             });
         }
 
-        // 3. دالة تفريغ اللوجز بالكامل أونلاين
+        // 3. دالة تفريغ اللوجز بالكامل أونلاين (خاصة بالأدمن فقط)
         async function deleteAllLogs() {
+            if (currentUser.role !== 'admin') return;
             if (confirm('تنبيه للمدير: هل أنت متأكد من مسح جميع اللوجز من قاعدة البيانات أونلاين؟')) {
                 const client = getSupabase();
                 if (client) {
@@ -227,7 +234,7 @@
             }
         }
 
-        // 4. البث اللحظي المباشر: أي حركة جديدة من أي جهاز تُعرض فوراً بدون ريفرش
+        // 4. البث اللحظي المباشر
         function setupRealtimeLogs() {
             const client = getSupabase();
             if (!client) return;
@@ -240,7 +247,6 @@
               .subscribe();
         }
 
-        // تشغيل الجلب والتحديث المباشر فور فتح الصفحة
         loadLogsFromDatabase();
         setupRealtimeLogs();
     </script>

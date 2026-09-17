@@ -139,6 +139,8 @@
                         <option value="Hess Screen Test">Hess Screen Test</option>
                         <option value="Fluorescein">Fluorescein</option>
                         <option value="Field of Vision">Field of Vision</option>
+                        <option value="IPL">IPL</option>
+                        <option value="طبقة الدموع">طبقة الدموع</option>
                         <option value="All">All (الكل)</option>
                     </select>
                     <p id="examTypeHint" class="text-[10px] text-gray-400 font-bold mt-1">يتطلب اختيار 'فحص' لتفعيل القائمة</p>
@@ -262,17 +264,17 @@
             </form>
         </div>
 
-        <!-- أدوات البحث والمسح -->
+        <!-- أدوات البحث والمسح مع دعم البحث الذكي بالتواريخ -->
         <div class="flex flex-col sm:flex-row justify-between items-center gap-4 no-print bg-white p-4 rounded-xl shadow-md">
-            <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="🔍 بحث باسم الطبيب، الفرع، أو نوع الإجراء..." class="w-full sm:w-80 border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none">
+            <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="🔍 بحث باسم الطبيب، الفرع، أو تاريخ محدد (مثال: 9/9 أو 2026-09-09)..." class="w-full sm:w-96 border border-gray-400 rounded-lg p-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-red-500">
             <div class="flex gap-2">
                 <button id="clearAllBtn" onclick="clearAllData()" class="bg-red-100 hover:bg-red-200 text-red-700 px-5 py-2.5 rounded-lg text-sm font-bold">🗑️ مسح الكل</button>
             </div>
         </div>
 
-        <!-- الجدول الرئيسي -->
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden print-table border border-gray-300 w-full">
-            <table class="w-full text-center border-collapse">
+        <!-- الجدول الرئيسي مع التمرير الأفقي العام للجدول بالكامل -->
+        <div class="bg-white rounded-2xl shadow-xl overflow-x-auto print-table border border-gray-300 w-full">
+            <table class="w-full text-center border-collapse min-w-[1250px]">
                 <thead>
                     <tr class="bg-slate-800 text-white text-sm font-black tracking-wide border-b-2 border-slate-900">
                         <th class="py-3.5 px-3 border-l border-slate-700">م</th>
@@ -310,6 +312,60 @@
             'إضافة عيادة': 'bg-emerald-600 text-white font-black border-l border-emerald-700',
             'تعديل': 'bg-amber-500 text-white font-black border-l border-amber-600'
         };
+
+        // 🎯 مُحلل التواريخ الذكي والدقيق للبحث
+        function parseDateQuery(q) {
+            if (!q) return null;
+            const clean = q.trim().replace(/-/g, '/');
+            const parts = clean.split('/');
+
+            if (parts.length === 3 && parts[0].length === 4) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10);
+                const day = parseInt(parts[2], 10);
+                if (!isNaN(year) && !isNaN(month) && !isNaN(day)) return { day, month, year };
+            }
+
+            if (parts.length === 3 && parts[2].length === 4) {
+                const num1 = parseInt(parts[0], 10);
+                const num2 = parseInt(parts[1], 10);
+                const year = parseInt(parts[2], 10);
+                if (!isNaN(num1) && !isNaN(num2) && !isNaN(year)) return { num1, num2, year };
+            }
+
+            if (parts.length === 2) {
+                const num1 = parseInt(parts[0], 10);
+                const num2 = parseInt(parts[1], 10);
+                if (!isNaN(num1) && !isNaN(num2) && num1 > 0 && num1 <= 31 && num2 > 0 && num2 <= 31) {
+                    return { num1, num2 };
+                }
+            }
+
+            return null;
+        }
+
+        function isCreatedOnDate(createdAt, parsedQuery) {
+            if (!createdAt || !parsedQuery) return false;
+            const d = new Date(createdAt);
+            if (isNaN(d.getTime())) return false;
+
+            const day = d.getDate();
+            const month = d.getMonth() + 1;
+            const year = d.getFullYear();
+
+            if (parsedQuery.year && parsedQuery.year !== year) return false;
+
+            if (parsedQuery.day && parsedQuery.month) {
+                return day === parsedQuery.day && month === parsedQuery.month;
+            }
+
+            if (parsedQuery.num1 && parsedQuery.num2) {
+                return (day === parsedQuery.num1 && month === parsedQuery.num2) ||
+                       (day === parsedQuery.num2 && month === parsedQuery.num1);
+            }
+
+            return false;
+        }
 
         function handleClinicChange() {
             const clinicVal = document.getElementById('clinic').value;
@@ -429,7 +485,6 @@
             const todayStr = new Date().toISOString().split('T')[0];
             const now = Date.now();
 
-            // الفلترة الخاصة بالكول سينتر والعرض فقط (تنتظر 6 دقائق قبل الظهور)
             const visibleAbsences = absences.filter(item => {
                 if (currentUser.role === 'callcenter' || currentUser.role === 'viewer') {
                     const createdTime = item.createdTimestamp || now;
@@ -471,6 +526,11 @@
                 document.getElementById('navReportsBtn').classList.remove('hidden');
                 document.getElementById('navUsersBtn').classList.remove('hidden');
                 document.getElementById('navLogsBtn').classList.remove('hidden');
+            } else if (currentUser.role === 'subadmin') {
+                badge.innerText = "مشرف"; badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-800";
+                document.getElementById('navReportsBtn').classList.remove('hidden');
+                document.getElementById('navLogsBtn').classList.remove('hidden');
+                document.getElementById('clearAllBtn').classList.add('hidden');
             } else if (currentUser.role === 'editor') {
                 badge.innerText = "مدخل بيانات"; badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-blue-100 text-blue-800";
                 document.getElementById('navReportsBtn').classList.remove('hidden');
@@ -512,6 +572,7 @@
                     timeTo: item.time_to,
                     substituteDoctor: item.substitute_doctor, 
                     notes: item.notes, 
+                    created_at: item.created_at || null,
                     ccSeen: Boolean(item.cc_seen),
                     ccSeenBy: item.cc_seen_by || '',
                     ccSeenTimestamp: item.cc_seen_timestamp ? new Date(item.cc_seen_timestamp).getTime() : null,
@@ -537,7 +598,6 @@
             const endDateVal = document.getElementById('endDate').value;
             const clinicVal = document.getElementById('clinic').value;
 
-            // جلب الفرع المختار حسب نوع الإجراء
             let branchVal = '';
             if (entryTypeVal === 'اعتذار فترة') {
                 const selectedBranches = Array.from(document.querySelectorAll('input[name="branchOption"]:checked')).map(cb => cb.value);
@@ -554,7 +614,6 @@
                 }
             }
 
-            // ⚠️ فحص التعارض الذكي للأطباء
             if (!editId) {
                 const hasConflict = absences.some(item => {
                     if (item.doctorName.trim().toLowerCase() === doctorNameVal.toLowerCase()) {
@@ -602,8 +661,11 @@
                 time_to: isPeriod ? 'طوال الفترة' : document.getElementById('timeTo').value,
                 substitute_doctor: document.getElementById('substituteDoctor').value || '-',
                 notes: document.getElementById('notes').value || '-',
-                created_by_name: currentUser ? currentUser.name : 'مستخدم'
+                created_by_name: currentUser ? currentUser.name : 'مستخدم',
+                created_at: editId ? undefined : new Date().toISOString()
             };
+
+            if (editId) delete absencePayload.created_at;
 
             if (client) {
                 if (editId) {
@@ -627,7 +689,7 @@
         });
 
         async function toggleCallCenterSeen(id) {
-            if (currentUser.role !== 'callcenter' && currentUser.role !== 'admin') return;
+            if (currentUser.role !== 'callcenter' && currentUser.role !== 'admin' && currentUser.role !== 'subadmin') return;
             const item = absences.find(a => a.id === id);
             if (!item || item.ccSeen) return;
 
@@ -647,7 +709,7 @@
         }
 
         async function toggleCallCenterExecuted(id) {
-            if (currentUser.role !== 'callcenter' && currentUser.role !== 'admin') return;
+            if (currentUser.role !== 'callcenter' && currentUser.role !== 'admin' && currentUser.role !== 'subadmin') return;
             const item = absences.find(a => a.id === id);
             if (!item) return;
 
@@ -676,6 +738,41 @@
             fetchAbsences();
         }
 
+        // 🔍 دالة الفلترة الذكية للجدول الرئيسي
+        function filterTable() {
+            const rawQuery = document.getElementById('searchInput').value.trim();
+            const query = rawQuery.toLowerCase();
+
+            if (!query) {
+                renderTable(absences);
+                return;
+            }
+
+            const parsedDate = parseDateQuery(rawQuery);
+
+            if (parsedDate) {
+                const matchedByExactDate = absences.filter(i => isCreatedOnDate(i.created_at || i.createdTimestamp, parsedDate));
+                renderTable(matchedByExactDate);
+                return;
+            }
+
+            renderTable(absences.filter(i => {
+                const docName = (i.doctorName || '').toLowerCase();
+                const branch = (i.branch || '').toLowerCase();
+                const entryType = (i.entryType || '').toLowerCase();
+                const examType = (i.examType || '').toLowerCase();
+                const notes = (i.notes || '').toLowerCase();
+                const subDoc = (i.substituteDoctor || '').toLowerCase();
+
+                return docName.includes(query) ||
+                       branch.includes(query) ||
+                       entryType.includes(query) ||
+                       examType.includes(query) ||
+                       notes.includes(query) ||
+                       subDoc.includes(query);
+            }));
+        }
+
         function renderTable(dataToRender = absences) {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
@@ -685,14 +782,12 @@
                 const createdTime = item.createdTimestamp || now;
                 const elapsedSeconds = (now - createdTime) / 1000;
 
-                // 🔒 حجب البيانات عن الكول سينتر والعرض فقط خلال فترة الـ 6 دقائق المتاحة لحذف المحرر
                 if (currentUser.role === 'callcenter' || currentUser.role === 'viewer') {
                     if (elapsedSeconds < 360) {
                         return false;
                     }
                 }
 
-                // إخفاء الطلب بعد 60 ثانية من تنفيذه
                 if (item.ccExecuted && item.ccExecutedTimestamp) {
                     return ((now - item.ccExecutedTimestamp) / 1000) < 60;
                 }
@@ -708,11 +803,11 @@
                 const tr = document.createElement('tr');
                 tr.className = index % 2 === 0 ? 'bg-white hover:bg-amber-50/60 transition duration-150' : 'bg-slate-50/70 hover:bg-amber-50/60 transition duration-150';
 
-                const canEdit = (currentUser.role === 'admin');
+                const canEdit = (currentUser.role === 'admin' || currentUser.role === 'subadmin');
                 const createdTime = item.createdTimestamp || now;
                 const elapsedSeconds = (now - createdTime) / 1000;
                 const canEditorDelete = (elapsedSeconds <= 360);
-                const canDelete = (currentUser.role === 'admin') || (currentUser.role === 'editor' && canEditorDelete);
+                const canDelete = (currentUser.role === 'admin' || currentUser.role === 'subadmin') || (currentUser.role === 'editor' && canEditorDelete);
 
                 let actionButtons = '';
                 if (canEdit || canDelete) {
@@ -738,7 +833,7 @@
                     `;
                 }
 
-                const isCC = currentUser.role === 'callcenter' || currentUser.role === 'admin';
+                const isCC = currentUser.role === 'callcenter' || currentUser.role === 'admin' || currentUser.role === 'subadmin';
 
                 let seenBadgeHTML = item.ccSeen ? `<div class="text-[10px] text-blue-700 font-bold mt-1">👁️ رؤية: ${item.ccSeenBy}</div>` : '';
                 let executedBadgeHTML = item.ccExecuted ? `<div class="text-[10px] text-emerald-700 font-bold mt-0.5">✅ تنفيذ: ${item.ccExecutedBy}</div>` : '';
@@ -776,8 +871,8 @@
                     <td class="py-3 px-2 border-l border-gray-200 font-bold text-slate-700">${item.timeTo}</td>
                     <td class="py-3 px-2 border-l border-gray-200 font-black text-red-600 bg-red-50/30">${item.substituteDoctor}</td>
                     
-                    <td class="py-2.5 px-3 border-l border-gray-200 text-right min-w-[220px]">
-                        <!-- الملاحظات -->
+                    <td class="py-2.5 px-3 border-l border-gray-200 text-right min-w-[240px]">
+                        <!-- الملاحظات كاملة وبدون قص -->
                         <div class="text-xs font-bold text-gray-700 mb-2 leading-snug">
                             ${(item.notes && item.notes !== '-') ? `📝 <span class="text-gray-900 font-extrabold">${item.notes}</span>` : '<span class="text-gray-400 font-normal italic">لا توجد ملاحظات</span>'}
                         </div>
@@ -817,7 +912,7 @@
         }
 
         function editAbsence(id) {
-            if (currentUser.role !== 'admin') return;
+            if (currentUser.role !== 'admin' && currentUser.role !== 'subadmin') return;
 
             const item = absences.find(a => a.id === id);
             if (!item) return;
@@ -835,7 +930,6 @@
                 renderSelectedExamTags();
             }
 
-            // ضبط اختيار الفرع أو الفروع حسب نوع الإجراء
             if (item.entryType === 'اعتذار فترة') {
                 const branchesInItem = (item.branch || '').split(/[،,]/).map(b => b.trim());
                 document.querySelectorAll('input[name="branchOption"]').forEach(cb => {
@@ -876,7 +970,6 @@
             document.getElementById('absenceCancelBtn').classList.add('hidden');
         }
 
-        // دالة الحذف وتحديث الإشعارات المرتبطة للطبيب
         async function deleteItem(id) {
             const target = absences.find(a => a.id === id);
             if (!target) return;
@@ -885,7 +978,9 @@
             const createdTime = target.createdTimestamp || now;
             const elapsedSeconds = (now - createdTime) / 1000;
 
-            if (currentUser.role !== 'admin' && (currentUser.role !== 'editor' || elapsedSeconds > 360)) {
+            const isManager = (currentUser.role === 'admin' || currentUser.role === 'subadmin');
+
+            if (!isManager && (currentUser.role !== 'editor' || elapsedSeconds > 360)) {
                 alert('عذراً، انتهت مهلة الـ 6 دقائق المتاحة للحذف!');
                 return;
             }
@@ -904,7 +999,6 @@
             }
         }
 
-        // دالة تفريغ الكل وتفريغ الإشعارات
         async function clearAllData() {
             if (currentUser.role !== 'admin') return;
             if (confirm('تنبيه للمدير: هل تريد مسح جميع البيانات والإشعارات؟')) {
@@ -922,11 +1016,6 @@
         function updateDay() {
             const d = document.getElementById('date').value;
             if (d) document.getElementById('day').value = daysArabic[new Date(d).getDay()];
-        }
-
-        function filterTable() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            renderTable(absences.filter(i => i.doctorName.toLowerCase().includes(query) || i.branch.toLowerCase().includes(query) || (i.entryType && i.entryType.toLowerCase().includes(query)) || (i.examType && i.examType.toLowerCase().includes(query))));
         }
 
         async function fetchNotifications() {
@@ -949,7 +1038,7 @@
             notifications.forEach(n => {
                 const item = document.createElement('div');
                 item.className = `p-2.5 rounded-lg border-b ${n.is_read ? 'bg-white text-gray-600' : 'bg-red-50 text-gray-900 font-bold'}`;
-                item.innerHTML = `<div class="flex justify-between"><span>${n.text}</span><span class="text-[10px] text-gray-400">${new Date(n.created_at).toLocaleTimeString('ar-EG')}</span></div>`;
+                item.innerHTML = `<div class="flex justify-between"><span>${n.text}</span><span class="text-[10px] text-gray-400">${new Date(n.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</span></div>`;
                 list.appendChild(item);
             });
         }

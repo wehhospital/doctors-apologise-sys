@@ -24,307 +24,308 @@ function getSupabase() {
       }
     }
     return null;
-  }
+}
   
-  // الشارات الملونة
-  const clinicBadges = {
-      'عياده': '<span class="bg-blue-100 text-blue-800 border border-blue-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟦 عياده</span>',
-      'فحص': '<span class="bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟨 فحص</span>',
-      'عمليات': '<span class="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟪 عمليات</span>'
-  };
-  
-  const branchBadges = {
-      'فرع الثورة': '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟩 فرع الثورة</span>',
-      'فرع الحجاز': '<span class="bg-indigo-100 text-indigo-800 border border-indigo-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟦 فرع الحجاز</span>',
-      'فرع الغردقه': '<span class="bg-rose-100 text-rose-800 border border-rose-300 px-2.5 py-1 rounded-full font-black text-xs shadow-sm inline-block">🟥 فرع الغردقه</span>'
-  };
+// الشارات الملونة
+const clinicBadges = {
+    'عياده': '<span class="bg-blue-100 text-blue-800 border border-blue-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟦 عياده</span>',
+    'فحص': '<span class="bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟨 فحص</span>',
+    'عمليات': '<span class="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟪 عمليات</span>'
+};
 
-  // دالة عرض شارات الفروع المتعددة
-  function renderBranchBadges(branchStr) {
-      if (!branchStr) return '-';
-      const branches = branchStr.split(/[،,]/).map(b => b.trim()).filter(Boolean);
-      return branches.map(b => branchBadges[b] || `<span class="bg-gray-100 text-gray-800 border border-gray-300 px-2 py-0.5 rounded-full font-black text-xs shadow-sm inline-block">${b}</span>`).join(' ');
-  }
-  
-  const rolesBadges = {
-      admin: '<span class="text-red-700 bg-red-100 border border-red-200 px-2.5 py-1 rounded-full text-xs">🔴 مدير النظام</span>',
-      editor: '<span class="text-blue-700 bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-full text-xs">🔵 مدخل بيانات</span>',
-      callcenter: '<span class="text-purple-700 bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-full text-xs">🟣 كول سينتر</span>',
-      viewer: '<span class="text-green-700 bg-green-100 border border-green-200 px-2.5 py-1 rounded-full text-xs">🟢 عرض فقط</span>'
-  };
-  
-  // 2. دالة تشغيل صوت الإشعارات الافتراضي مع المانع الذكي للتكرار
-  let lastSoundPlayTime = 0;
-  
-  function playNotificationSound() {
-      const now = Date.now();
-      if (now - lastSoundPlayTime < 2000) {
-          return;
-      }
-      lastSoundPlayTime = now;
-  
-      try {
-          const audio = new Audio('./assets/mixkit-software-interface-start-2574.wav');
-          audio.volume = 0.6;
-          audio.play().catch(() => playFallbackChime());
-      } catch (e) {
-          playFallbackChime();
-      }
-  }
-  
-  function playFallbackChime() {
-      try {
-          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          if (!AudioCtx) return;
-          const ctx = new AudioCtx();
-  
-          const osc1 = ctx.createOscillator();
-          const gain1 = ctx.createGain();
-          osc1.type = 'sine';
-          osc1.frequency.setValueAtTime(1046.50, ctx.currentTime);
-          gain1.gain.setValueAtTime(0.2, ctx.currentTime);
-          gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-          osc1.connect(gain1);
-          gain1.connect(ctx.destination);
-          osc1.start(ctx.currentTime);
-          osc1.stop(ctx.currentTime + 0.15);
-  
-          const osc2 = ctx.createOscillator();
-          const gain2 = ctx.createGain();
-          osc2.type = 'sine';
-          osc2.frequency.setValueAtTime(1318.51, ctx.currentTime + 0.08);
-          gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.08);
-          gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-          osc2.connect(gain2);
-          gain2.connect(ctx.destination);
-          osc2.start(ctx.currentTime + 0.08);
-          osc2.stop(ctx.currentTime + 0.35);
-      } catch (err) {
-          console.log("Audio play error:", err);
-      }
-  }
-  
-  // 3. دالة إظهار البوب أب الملون
-  function showToast(message, type = 'success') {
-      const container = document.getElementById('toastContainer');
-      if (!container) return;
-  
-      const toast = document.createElement('div');
-      const bgClass = type === 'success' ? 'bg-emerald-600' : 'bg-red-600';
-      toast.className = `${bgClass} text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-sm flex items-center gap-2 transform transition-all duration-300 translate-y-5 opacity-0 border border-white/20`;
-      toast.innerHTML = `<span>🔔</span> <span>${message}</span>`;
-  
-      container.appendChild(toast);
-  
-      setTimeout(() => toast.classList.remove('translate-y-5', 'opacity-0'), 50);
-      setTimeout(() => {
-          toast.classList.add('translate-y-5', 'opacity-0');
-          setTimeout(() => toast.remove(), 300);
-      }, 4000);
-  }
-  
-  // 4. دالة فتح وإغلاق قائمة الإشعارات
-  document.addEventListener('click', function(e) {
-      const notifContainer = document.getElementById('notifContainer');
-      const notifMenu = document.getElementById('notifMenu');
-      if (notifContainer && notifMenu && !notifMenu.classList.contains('hidden')) {
-          if (!notifContainer.contains(e.target)) {
-              notifMenu.classList.add('hidden');
-          }
-      }
-  });
-  
-  function toggleNotificationsMenu(e) {
-      if (e) {
-          e.preventDefault();
-          e.stopPropagation();
-      }
-      const menu = document.getElementById('notifMenu');
-      if (menu) {
-          menu.classList.toggle('hidden');
-      }
-  }
-  
-  // 5. دالة التحقق من الجلسة والصلاحيات (تدعم مصفوفة صلاحيات)
-  function checkAuth(allowedRoles = null) {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-      if (!currentUser) {
-          window.location.href = 'login.html';
-          return null;
-      }
-      if (allowedRoles) {
-          const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
-          if (!rolesArray.includes(currentUser.role)) {
-              alert('عذراً، ليس لديك صلاحية للوصول لهذه الصفحة!');
-              window.location.href = 'index.html';
-              return null;
-          }
-      }
-      return currentUser;
-  }
-  
-  // تسجيل الخروج
-  async function logout() {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-      if (currentUser) {
-          await createLog('تسجيل خروج', `قام (${currentUser.name}) بتسجيل الخروج من النظام`);
-      }
-      localStorage.removeItem('currentUser');
-      window.location.href = 'login.html';
-  }
-  
-  // 6. دالة تسجيل السجلات الشاملة
-  async function createLog(actionType, details) {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-      const userName = currentUser ? currentUser.name : (document.getElementById('username')?.value || 'مستخدم');
-      
-      const logEntry = {
-          id: Date.now(),
-          user_name: userName,
-          action: actionType,
-          details: details,
-          created_at: new Date().toISOString()
-      };
-  
-      let logs = JSON.parse(localStorage.getItem('appLogs')) || [];
-      logs.unshift(logEntry);
-      localStorage.setItem('appLogs', JSON.stringify(logs));
-  
-      const client = getSupabase();
-      if (client) {
-          const { error } = await client.from('audit_logs').insert([{
-              user_name: userName,
-              action: actionType,
-              details: details
-          }]);
-          if (error) console.error("⚠️ خطأ حفظ اللوج:", error.message);
-      }
-  }
-  
-  // 7. إضافة إشعار أونلاين
-  async function addNotification(text) {
-      playNotificationSound();
-      showToast(text, 'success');
-  
-      const client = getSupabase();
-      if (client) {
-          await client.from('notifications').insert([{
-              text: text,
-              is_read: false
-          }]);
-      }
-  }
-  
-  async function fetchNotifications() {
-      const client = getSupabase();
-      let localNotifs = JSON.parse(localStorage.getItem('appNotifications')) || [];
-  
-      if (client) {
-          const { data, error } = await client
-              .from('notifications')
-              .select('*')
-              .order('created_at', { ascending: false });
-  
-          if (!error && data && data.length > 0) {
-              notifications = data;
-              localStorage.setItem('appNotifications', JSON.stringify(notifications));
-          } else {
-              notifications = localNotifs;
-          }
-      } else {
-          notifications = localNotifs;
-      }
-  
-      renderNotifications();
-  }
-  
-  async function markAllNotificationsRead() {
-      notifications.forEach(n => n.is_read = true);
-      localStorage.setItem('appNotifications', JSON.stringify(notifications));
-      renderNotifications();
-  
-      const client = getSupabase();
-      if (client) {
-          await client.from('notifications').update({ is_read: true }).neq('id', 0);
-      }
-  }
-  
-  function renderNotifications() {
-      const list = document.getElementById('notifList');
-      const badge = document.getElementById('notifBadge');
-      if (!list) return;
-  
-      const unreadCount = notifications.filter(n => !n.is_read).length;
-  
-      if (unreadCount > 0) {
-          badge.innerText = unreadCount;
-          badge.classList.remove('hidden');
-      } else {
-          badge.classList.add('hidden');
-      }
-  
-      list.innerHTML = '';
-      if (notifications.length === 0) {
-          list.innerHTML = `<div class="p-3 text-center text-gray-400 font-bold">لا توجد إشعارات حالياً</div>`;
-          return;
-      }
-  
-      notifications.forEach(n => {
-          const timeFormatted = n.created_at ? new Date(n.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '';
-          const item = document.createElement('div');
-          item.className = `p-2.5 rounded-lg border-b ${n.is_read ? 'bg-white text-gray-600' : 'bg-red-50 text-gray-900 font-bold border-red-100'}`;
-          item.innerHTML = `
-              <div class="flex justify-between items-start">
-                  <span>${n.text}</span>
-                  <span class="text-[10px] text-gray-400 mr-2">${timeFormatted}</span>
-              </div>
-          `;
-          list.appendChild(item);
-      });
-  }
+const branchBadges = {
+    'فرع الثورة': '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟩 فرع الثورة</span>',
+    'فرع الحجاز': '<span class="bg-indigo-100 text-indigo-800 border border-indigo-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟦 فرع الحجاز</span>',
+    'فرع الغردقه': '<span class="bg-rose-100 text-rose-800 border border-rose-300 px-2.5 py-1 rounded-full font-black text-xs md:text-sm shadow-sm inline-block">🟥 فرع الغردقه</span>'
+};
 
-  // 8. دالة نسخ نص منسق للواتساب (تشتمل على الدكتور البديل)
-  function copyWhatsAppText(docName, entryType, clinic, branch, date, endDate, day, timeFrom, timeTo, substituteDoctor, notes) {
-      let text = `📢 *تنبيه بشأن جدول الأطباء*\n\n`;
-      text += `🔹 *نوع الإجراء:* ${entryType}\n`;
-      text += `👨‍⚕️ *الطبيب:* ${docName}\n`;
-      text += `🏥 *الفرع والنوع:* ${branch} (${clinic})\n`;
-      text += (entryType === 'اعتذار فترة' && endDate) ? `📅 *الفترة:* من ${date} إلى ${endDate}\n` : `📅 *التاريخ:* ${date} (${day})\n`;
-      if (timeFrom && timeFrom !== 'طوال الفترة') text += `⏰ *الوقت:* من ${timeFrom} إلى ${timeTo}\n`;
-      if (substituteDoctor && substituteDoctor !== '-' && substituteDoctor.trim() !== '') {
-          text += `🔄 *الطبيب البديل:* ${substituteDoctor}\n`;
-      }
-      if (notes && notes !== '-') text += `📝 *ملاحظات:* ${notes}\n`;
+// دالة عرض شارات الفروع المتعددة
+function renderBranchBadges(branchStr) {
+    if (!branchStr || branchStr === '-') return '-';
+    const branches = branchStr.split(/[،,]/).map(b => b.trim()).filter(Boolean);
+    return branches.map(b => branchBadges[b] || `<span class="bg-gray-100 text-gray-800 border border-gray-300 px-2 py-0.5 rounded-full font-black text-xs shadow-sm inline-block">${b}</span>`).join(' ');
+}
 
-      navigator.clipboard.writeText(text).then(() => {
-          showToast('📱 تم نسخ التنبيه المنسق للواتساب بنجاح!', 'success');
-      }).catch(() => {
-          alert("الرسالة:\n" + text);
-      });
-  }
+const rolesBadges = {
+    admin: '<span class="text-red-700 bg-red-100 border border-red-200 px-2.5 py-1 rounded-full text-xs font-black">🔴 مدير النظام</span>',
+    subadmin: '<span class="text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-full text-xs font-black">🟠 مشرف</span>',
+    editor: '<span class="text-blue-700 bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-full text-xs font-bold">🔵 مدخل بيانات</span>',
+    callcenter: '<span class="text-purple-700 bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-full text-xs font-bold">🟣 كول سينتر</span>',
+    viewer: '<span class="text-green-700 bg-green-100 border border-green-200 px-2.5 py-1 rounded-full text-xs font-bold">🟢 عرض فقط</span>'
+};
 
-  // 9. دالة تصدير البيانات إلى ملف أكسيل CSV مع إتاحة اللغة العربية
-  function exportToCSV(filename, headers, rows) {
-      let csvContent = "\uFEFF";
-      csvContent += headers.join(",") + "\n";
+// 2. دالة تشغيل صوت الإشعارات الافتراضي مع المانع الذكي للتكرار
+let lastSoundPlayTime = 0;
 
-      rows.forEach(row => {
-          let rowData = row.map(val => {
-              let clean = (val === null || val === undefined) ? '' : String(val).replace(/"/g, '""');
-              return `"${clean}"`;
-          });
-          csvContent += rowData.join(",") + "\n";
-      });
+function playNotificationSound() {
+    const now = Date.now();
+    if (now - lastSoundPlayTime < 2000) {
+        return;
+    }
+    lastSoundPlayTime = now;
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement("a");
-      if (link.download !== undefined) {
-          const url = URL.createObjectURL(blob);
-          link.setAttribute("href", url);
-          link.setAttribute("download", filename);
-          link.style.visibility = 'hidden';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-      }
-  }
+    try {
+        const audio = new Audio('./assets/mixkit-software-interface-start-2574.wav');
+        audio.volume = 0.6;
+        audio.play().catch(() => playFallbackChime());
+    } catch (e) {
+        playFallbackChime();
+    }
+}
+
+function playFallbackChime() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(1046.50, ctx.currentTime);
+        gain1.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 0.15);
+
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1318.51, ctx.currentTime + 0.08);
+        gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.08);
+        gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(ctx.currentTime + 0.08);
+        osc2.stop(ctx.currentTime + 0.35);
+    } catch (err) {
+        console.log("Audio play error:", err);
+    }
+}
+
+// 3. دالة إظهار البوب أب الملون
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    const bgClass = type === 'success' ? 'bg-emerald-600' : 'bg-red-600';
+    toast.className = `${bgClass} text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-sm flex items-center gap-2 transform transition-all duration-300 translate-y-5 opacity-0 border border-white/20`;
+    toast.innerHTML = `<span>🔔</span> <span>${message}</span>`;
+
+    container.appendChild(toast);
+
+    setTimeout(() => toast.classList.remove('translate-y-5', 'opacity-0'), 50);
+    setTimeout(() => {
+        toast.classList.add('translate-y-5', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+// 4. دالة فتح وإغلاق قائمة الإشعارات
+document.addEventListener('click', function(e) {
+    const notifContainer = document.getElementById('notifContainer');
+    const notifMenu = document.getElementById('notifMenu');
+    if (notifContainer && notifMenu && !notifMenu.classList.contains('hidden')) {
+        if (!notifContainer.contains(e.target)) {
+            notifMenu.classList.add('hidden');
+        }
+    }
+});
+
+function toggleNotificationsMenu(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    const menu = document.getElementById('notifMenu');
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+// 5. دالة التحقق من الجلسة والصلاحيات
+function checkAuth(allowedRoles = null) {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) {
+        window.location.href = 'login.html';
+        return null;
+    }
+    if (allowedRoles) {
+        const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+        if (!rolesArray.includes(currentUser.role)) {
+            alert('عذراً، ليس لديك صلاحية للوصول لهذه الصفحة!');
+            window.location.href = 'index.html';
+            return null;
+        }
+    }
+    return currentUser;
+}
+
+// تسجيل الخروج
+async function logout() {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (currentUser) {
+        await createLog('تسجيل خروج', `قام (${currentUser.name}) بتسجيل الخروج من النظام`);
+    }
+    localStorage.removeItem('currentUser');
+    window.location.href = 'login.html';
+}
+
+// 6. دالة تسجيل السجلات الشاملة
+async function createLog(actionType, details) {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    const userName = currentUser ? currentUser.name : (document.getElementById('username')?.value || 'مستخدم');
+    
+    const logEntry = {
+        id: Date.now(),
+        user_name: userName,
+        action: actionType,
+        details: details,
+        created_at: new Date().toISOString()
+    };
+
+    let logs = JSON.parse(localStorage.getItem('appLogs')) || [];
+    logs.unshift(logEntry);
+    localStorage.setItem('appLogs', JSON.stringify(logs));
+
+    const client = getSupabase();
+    if (client) {
+        const { error } = await client.from('audit_logs').insert([{
+            user_name: userName,
+            action: actionType,
+            details: details
+        }]);
+        if (error) console.error("⚠️ خطأ حفظ اللوج:", error.message);
+    }
+}
+
+// 7. إضافة إشعار أونلاين
+async function addNotification(text) {
+    playNotificationSound();
+    showToast(text, 'success');
+
+    const client = getSupabase();
+    if (client) {
+        await client.from('notifications').insert([{
+            text: text,
+            is_read: false
+        }]);
+    }
+}
+
+async function fetchNotifications() {
+    const client = getSupabase();
+    let localNotifs = JSON.parse(localStorage.getItem('appNotifications')) || [];
+
+    if (client) {
+        const { data, error } = await client
+            .from('notifications')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+            notifications = data;
+            localStorage.setItem('appNotifications', JSON.stringify(notifications));
+        } else {
+            notifications = localNotifs;
+        }
+    } else {
+        notifications = localNotifs;
+    }
+
+    renderNotifications();
+}
+
+async function markAllNotificationsRead() {
+    notifications.forEach(n => n.is_read = true);
+    localStorage.setItem('appNotifications', JSON.stringify(notifications));
+    renderNotifications();
+
+    const client = getSupabase();
+    if (client) {
+        await client.from('notifications').update({ is_read: true }).neq('id', 0);
+    }
+}
+
+function renderNotifications() {
+    const list = document.getElementById('notifList');
+    const badge = document.getElementById('notifBadge');
+    if (!list) return;
+
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+
+    if (unreadCount > 0) {
+        badge.innerText = unreadCount;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+
+    list.innerHTML = '';
+    if (notifications.length === 0) {
+        list.innerHTML = `<div class="p-3 text-center text-gray-400 font-bold">لا توجد إشعارات حالياً</div>`;
+        return;
+    }
+
+    notifications.forEach(n => {
+        const timeFormatted = n.created_at ? new Date(n.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+        const item = document.createElement('div');
+        item.className = `p-2.5 rounded-lg border-b ${n.is_read ? 'bg-white text-gray-600' : 'bg-red-50 text-gray-900 font-bold border-red-100'}`;
+        item.innerHTML = `
+            <div class="flex justify-between items-start">
+                <span>${n.text}</span>
+                <span class="text-[10px] text-gray-400 mr-2">${timeFormatted}</span>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+}
+
+// 8. دالة نسخ نص منسق للواتساب
+function copyWhatsAppText(docName, entryType, clinic, branch, date, endDate, day, timeFrom, timeTo, substituteDoctor, notes) {
+    let text = `📢 *تنبيه بشأن جدول الأطباء*\n\n`;
+    text += `🔹 *نوع الإجراء:* ${entryType}\n`;
+    text += `👨‍⚕️ *الطبيب:* ${docName}\n`;
+    text += `🏥 *الفرع والنوع:* ${branch} (${clinic})\n`;
+    text += (entryType === 'اعتذار فترة' && endDate) ? `📅 *الفترة:* من ${date} إلى ${endDate}\n` : `📅 *التاريخ:* ${date} (${day})\n`;
+    if (timeFrom && timeFrom !== 'طوال الفترة') text += `⏰ *الوقت:* من ${timeFrom} إلى ${timeTo}\n`;
+    if (substituteDoctor && substituteDoctor !== '-' && substituteDoctor.trim() !== '') {
+        text += `🔄 *الطبيب البديل:* ${substituteDoctor}\n`;
+    }
+    if (notes && notes !== '-') text += `📝 *ملاحظات:* ${notes}\n`;
+
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('📱 تم نسخ التنبيه المنسق للواتساب بنجاح!', 'success');
+    }).catch(() => {
+        alert("الرسالة:\n" + text);
+    });
+}
+
+// 9. دالة تصدير البيانات إلى ملف أكسيل CSV
+function exportToCSV(filename, headers, rows) {
+    let csvContent = "\uFEFF";
+    csvContent += headers.join(",") + "\n";
+
+    rows.forEach(row => {
+        let rowData = row.map(val => {
+            let clean = (val === null || val === undefined) ? '' : String(val).replace(/"/g, '""');
+            return `"${clean}"`;
+        });
+        csvContent += rowData.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+}
